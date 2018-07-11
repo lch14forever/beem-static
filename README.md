@@ -1,0 +1,1 @@
+# beem_static
