@@ -1,6 +1,5 @@
 require('foreach')
 require('doMC')
-suppressMessages(library(monomvn))
 suppressMessages(library(glmnet))
 
 ######### internal functions #########
@@ -67,10 +66,10 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0){
         penalty <- c(0,rep(1, ncol(X)-1))
         ## maxmin <- median(Y) + 2* IQR(Y) %*% c(1,-1)
         ## idx <- Y <= maxmin[1] & Y >=maxmin[2]
-        fit <- cv.glmnet(X[,], Y[], intercept=intercept, lambda=lambda.init,
+        fit <- cv.glmnet(X, Y, intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty)
         lambda <- seq(fit$lambda.1se/10, fit$lambda.1se*10, fit$lambda.1se/10)
-        fit <- cv.glmnet(X[,], Y[], intercept=intercept, lambda=lambda,
+        fit <- cv.glmnet(X, Y, intercept=intercept, lambda=lambda,
                          penalty.factor=penalty)        
         return(as.numeric(coef(fit))[-1])
     }
@@ -241,11 +240,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, refine.start
             sample.filter.iter <- (matrix(rep(1,nrow(sample.filter))) %*% bad.samples)>0  | sample.filter.iter
             ##sample.filter.iter <- t(abs(err)) > dev | sample.filter.iter
         }
-        print(rowSums(sample.filter.iter))
-        print(scaling/median(m.iter))
         m.iter <- m.iter*scaling/median(m.iter)
-        ## record
-        print(cor(m.true, m.iter, method = 'spearman'))
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
     }
