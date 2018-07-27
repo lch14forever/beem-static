@@ -210,7 +210,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, refine.start
     spNames <- rownames(dat)
     
     ## initialization
-    sample.filter <- sample.filter.iter <- tmp$sample.filter
+    sample.filter.iter <- tmp$sample.filter
     tmp <- css(t(dat.tss))$normFactors
     m.iter <- scaling * tmp/median(tmp) 
     trace.m <- matrix(m.iter)
@@ -237,14 +237,17 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, refine.start
         ##err <- err/sd(err[err!=0])
         if(iter > refine.start.iter){
             bad.samples <- rowSums(apply(pca$x[,1:2], 2, function(x) abs(x-median(x))/mad(x) > dev)) > 0
-            sample.filter.iter <- (matrix(rep(1,nrow(sample.filter))) %*% bad.samples)>0  | sample.filter.iter
+            sample.filter.iter <- (matrix(rep(1,nrow(sample.filter.iter))) %*% bad.samples)>0  | sample.filter.iter
             ##sample.filter.iter <- t(abs(err)) > dev | sample.filter.iter
+            
+            message(paste0("Number of samples removed (detected to be non-static): ",
+                                   sum(colSums(sample.filter.iter)>0)))
         }
-        m.iter <- m.iter*scaling/median(m.iter)
+        m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0])
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
     }
     list(trace.m=trace.m, trace.p=trace.p, err=err,
-         sample2rm = which(bad.samples))
+         sample2rm = which(colSums(sample.filter.iter) > 0))
 }
 

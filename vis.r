@@ -4,6 +4,7 @@
 ##' @param true.biomass measured/true biomass (default: the biomass of last iteration)
 ##' @param alpha transparency parameter of the biomass lines
 ##' @description plot the trace of the fitted error of biomass
+##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
 diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
     trace.m <- beem.out$trace.m
@@ -25,5 +26,22 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
             ...
             )
     lines(x=1:ncol(trace.m),y=apply(rel.err.m,1,median), col='red', lwd=5)    
+}
+
+##' @title pcoa
+##' 
+##' @param countData OTU/species abundance table (each row is one species, each column is one site)
+##' @description perform a PCoA analysis using Bray-Curtis distance
+##' @importFrom vegan vegdist
+##' @import ggplot2
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @export
+pcoa <- function(countData){
+    dat.pcoa <- cmdscale(vegan::vegdist(t(countData)), eig=TRUE)
+    per.var <- (dat.pcoa$eig/sum(dat.pcoa$eig))[1:2] * 100
+    ggplot(data.frame(dat.pcoa$points), aes(x=X1, y=X2)) +
+        geom_point(size=2) +
+        labs(x=paste0('CMD1 (' ,round(per.var[1], 2),'%)'),
+             y=paste0('CMD2 (',round(per.var[2], 2),'%)'))    
 }
 
