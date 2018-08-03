@@ -28,20 +28,36 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
     lines(x=1:ncol(trace.m),y=apply(rel.err.m,1,median), col='red', lwd=5)    
 }
 
+library(ggplot2)
 ##' @title pcoa
 ##' 
 ##' @param countData OTU/species abundance table (each row is one species, each column is one site)
+##' @param col a vector of colors for the points
 ##' @description perform a PCoA analysis using Bray-Curtis distance
 ##' @importFrom vegan vegdist
 ##' @import ggplot2
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
-pcoa <- function(countData){
+pcoa <- function(countData, col='Color'){
     dat.pcoa <- cmdscale(vegan::vegdist(t(countData)), eig=TRUE)
     per.var <- (dat.pcoa$eig/sum(dat.pcoa$eig))[1:2] * 100
-    ggplot(data.frame(dat.pcoa$points), aes(x=X1, y=X2)) +
+    dat <- data.frame(dat.pcoa$points, col=col)
+    ggplot(dat, aes(x=X1, y=X2, col=col)) +
         geom_point(size=2) +
         labs(x=paste0('CMD1 (' ,round(per.var[1], 2),'%)'),
              y=paste0('CMD2 (',round(per.var[2], 2),'%)'))    
+}
+
+
+##' @title cluster
+##' 
+##' @param countData OTU/species abundance table (each row is one species, each column is one site)
+##' @description perform a hierachical clustering analysis using Bray-Curtis distance
+##' @importFrom vegan vegdist
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @export
+cluster <- function(countData){
+    hc <- hclust(vegan::vegdist(t(countData)))
+    hc
 }
 

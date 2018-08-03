@@ -15,7 +15,7 @@ option_list <- list(
     make_option("--ncpu", type="integer", default=10,
                 help="Number of CPUs",
                 dest="ncpu"),
-    make_option("--maxIter", type="integer", default=40,
+    make_option("--maxIter", type="integer", default=30,
                 help="Number of iterations",
                 dest="maxIter")    
     )

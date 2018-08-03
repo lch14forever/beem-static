@@ -38,7 +38,7 @@ css <- function(m, p=0.5){
 ##' @param seed seed
 ##' @description Infer parameters with blasso
 infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0){
-    ##set.seed(seed)
+    set.seed(seed)
     ## if(method=='monomvn'){
     ##     res <- tryCatch({
     ##         bl.fit <- blasso(X, Y, verb = 0, T=1000)
@@ -64,14 +64,16 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0){
     if(method=='glmnet'){
         lambda.init <- 10^(seq(-7,-1))
         penalty <- c(0,rep(1, ncol(X)-1))
-        ## maxmin <- median(Y) + 2* IQR(Y) %*% c(1,-1)
+        ## maxmin <- median(Y) + 1* mad(Y) %*% c(1,-1)
         ## idx <- Y <= maxmin[1] & Y >=maxmin[2]
         fit <- cv.glmnet(X, Y, intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty)
-        lambda <- seq(fit$lambda.1se/10, fit$lambda.1se*10, fit$lambda.1se/10)
+        lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*20, fit$lambda.1se/20)
         fit <- cv.glmnet(X, Y, intercept=intercept, lambda=lambda,
-                         penalty.factor=penalty)        
-        return(as.numeric(coef(fit))[-1])
+                         penalty.factor=penalty)
+        coefs <- coef(fit)[-1]
+        e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
+        return(c(coefs, e2))
     }
 }
 
@@ -116,7 +118,9 @@ norm <- function(a, b, x){
 func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
     ## infer parameter for each OTU
     registerDoMC(ncpu)
-    res <- foreach(i=1:nrow(dat.tss), .combine=rbind) %dopar% {
+    p <- nrow(dat.tss)
+    
+    res <- foreach(i=1:p, .combine=rbind) %dopar% {
         fil <- dat.tss[i,]!=0 & !sample.filter[i,]
         X <- t(rbind(1/m, dat.tss[-i,])[,fil])
         Y <- dat.tss[i, fil]
@@ -126,10 +130,13 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         }
         theta <- rep(0, nrow(dat.tss)+1)
         theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
-        theta[-(i+1)] <- infer(Y, X, ...)
-        theta
+        tmp <- infer(Y,X,...)
+        theta[-(i+1)] <- tmp[1:p]
+        e2 <- rep(NA, ncol(dat.tss))
+        e2[fil] <- tmp[-(1:p)]
+        c(theta, e2)
     }    
-    list(a=res[,1], b=postProcess(res[,-1]))
+    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,-(1:(p+1))])
 }
 
 
@@ -197,13 +204,23 @@ formatOutput <- function(a, b, vnames){
     param
 }
 
+##' @title detectBadSamples
+##' 
+##' @param err the errors estimated from regression
+##' @param threshold threshold to filter out samples
+detectBadSamples <- function(err, threshold){
+    score <- abs(err - median(err, na.rm = TRUE))/IQR(err, na.rm = TRUE)
+    score[is.na(score)] <- Inf
+    return(score > threshold)
+}
+
 ##' @title func.EM
 ##' 
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
-func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, refine.start.iter=max.iter/2){
+func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30){
     ## pre-processing    
     tmp <- preProcess(dat, dev=0)
     dat.tss <- tmp$tss
@@ -218,8 +235,13 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, refine.start
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
     trace.p <- data.frame(name=trace.p)
-    trace.e.pc1 <- matrix(nrow=length(m.iter), ncol=0)
-    trace.e.pc2 <- matrix(nrow=length(m.iter), ncol=0)
+
+    ## flags
+    remove_non_eq <- FALSE
+    removeIter <- 0
+
+    ## constants
+    m1 <- matrix(rep(1,nrow(sample.filter.iter)))
     ## EM
     for(iter in 1:max.iter){
         message(paste0("############# Run for iteration ", iter,": #############"))
@@ -227,27 +249,36 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, refine.start
         ##if(iter==1) method <- 'lm'
         if(iter>=1) method <- 'glmnet'
         tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method)
+        err.p <- tmp.p$e2
+        ## plot(colSums(err.p, na.rm = TRUE))
         message("M-step: estimating biomass...")
         tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, ncpu)
         m.iter <- tmp.m[,1]
-        err <- tmp.m[,-1]
-        pca <- prcomp( log(abs(err) + 1) )
-        trace.e.pc1 <- cbind(trace.e.pc1, pca$x[,1])
-        trace.e.pc2 <- cbind(trace.e.pc2, pca$x[,1])
-        ##err <- err/sd(err[err!=0])
-        if(iter > refine.start.iter){
-            bad.samples <- rowSums(apply(pca$x[,1:2], 2, function(x) abs(x-median(x))/mad(x) > dev)) > 0
-            sample.filter.iter <- (matrix(rep(1,nrow(sample.filter.iter))) %*% bad.samples)>0  | sample.filter.iter
-            ##sample.filter.iter <- t(abs(err)) > dev | sample.filter.iter
-            
+        err.m <- tmp.m[,-1]        
+
+        if(remove_non_eq){
+            bad.samples <- detectBadSamples(apply(err.p, 2, median, na.rm = TRUE), dev)
+            sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter
             message(paste0("Number of samples removed (detected to be non-static): ",
-                                   sum(colSums(sample.filter.iter)>0)))
+                           sum(colSums(sample.filter.iter)>0)))
+            removeIter <- removeIter + 1
         }
+        
         m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0])
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
+        criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3
+        if (iter > 5 && !remove_non_eq && criterion) {
+            message("Start to detect and remove bad samples...")
+            remove_non_eq <- TRUE
+        }
+
+        if (removeIter > 5 && remove_non_eq && criterion) {
+            message("Converged!")
+            break
+        }
     }
-    list(trace.m=trace.m, trace.p=trace.p, err=err,
+    list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
          sample2rm = which(colSums(sample.filter.iter) > 0))
 }
 
