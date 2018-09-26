@@ -36,8 +36,9 @@ css <- function(m, p=0.5){
 ##' @param method blasso or lm
 ##' @param intercept whether to include the intercept
 ##' @param seed seed
+##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis
 ##' @description Infer parameters with blasso
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0){
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=1){
     set.seed(seed)
     ## if(method=='monomvn'){
     ##     res <- tryCatch({
@@ -62,16 +63,29 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0){
         return(as.numeric(coef(lm(Y~X+0))))
     }
     if(method=='glmnet'){
-        lambda.init <- 10^(seq(-7,-1))
+        lambda.init <- rev(10^(seq(-7,-1)))
         penalty <- c(0,rep(1, ncol(X)-1))
-        ## maxmin <- median(Y) + 1* mad(Y) %*% c(1,-1)
-        ## idx <- Y <= maxmin[1] & Y >=maxmin[2]
-        fit <- cv.glmnet(X, Y, intercept=intercept, lambda=lambda.init,
+        maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
+        idx <- Y <= maxmin[1] & Y >=maxmin[2]
+        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty)
-        lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*20, fit$lambda.1se/20)
-        fit <- cv.glmnet(X, Y, intercept=intercept, lambda=lambda,
+        ## fit.auto <- cv.glmnet(X[idx,], Y[idx], intercept=intercept,
+        ##                       penalty.factor=penalty)
+
+        ## if (lambda.choice==1){
+        ##     lambda <- seq(fit$lambda.1se/20, max(fit.auto$lambda), length.out = 100)
+        ##     lambda <- rev(seq((lambda.1se)^(1/2)/5,
+        ##     (lambda.1se)^(1/2)*5,
+        ##     length.out = 100)^2)
+        ## }else{
+        ##     lambda <- rev(with(fit, seq(lambda.min/20, lambda.min*20, lambda.min/20)))
+        ## }
+        lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*10, length.out = 200)
+        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
+                         ## lambda.min.ratio = 1e-16,
+                         ## nlambda=500,
                          penalty.factor=penalty)
-        coefs <- coef(fit)[-1]
+        coefs <- coef(fit, s=ifelse(lambda.choice==1, 'lambda.1se', 'lambda.min'))[-1]
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
         return(c(coefs, e2))
     }
@@ -100,7 +114,8 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0){
 ##' @description estimate biomass with linear regression
 norm <- function(a, b, x){
     res <- -a / (b %*% x)
-    m <- median(abs(res[x!=0]))
+    res <- res[x!=0]
+    m <- median(res[res>0])
     err <- (m * (b %*% x) + a)[,1]/a
     err[x==0] <- 0
     c(m, err)
@@ -214,13 +229,28 @@ detectBadSamples <- function(err, threshold){
     return(score > threshold)
 }
 
+##' @title beem2param
+##'
+##' @param beem a BEEM object
+##' @description extract parameter estimates from a BEEM object
+##' @export
+beem2param <- function(beem){
+    p <- ncol(beem$err.m)
+    tmp <- beem$trace.p[, ncol(beem$trace.p)]
+    a.est <- tmp[1:p]
+    b.est <- matrix(tmp[-c(1:p)], p, p)
+    return (list(a.est=a.est, b.est=b.est)) 
+}
+
+
 ##' @title func.EM
 ##' 
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param ncpu number of CPUs (default: 4)
+##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
-func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30){
+func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, warm.iter=NULL, lambda.choice=1){
     ## pre-processing    
     tmp <- preProcess(dat, dev=0)
     dat.tss <- tmp$tss
@@ -248,7 +278,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30){
         message("E-step: estimating scaled parameters...")
         ##if(iter==1) method <- 'lm'
         if(iter>=1) method <- 'glmnet'
-        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method)
+        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice)
         err.p <- tmp.p$e2
         ## plot(colSums(err.p, na.rm = TRUE))
         message("M-step: estimating biomass...")
@@ -268,8 +298,12 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30){
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
         criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3
-        if (iter > 5 && !remove_non_eq && criterion) {
+        if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
             message("Start to detect and remove bad samples...")
+            remove_non_eq <- TRUE
+        }
+        if (iter > 5 && !remove_non_eq && criterion) {
+            message("Converged and start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
 

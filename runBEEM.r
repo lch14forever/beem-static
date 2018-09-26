@@ -22,9 +22,6 @@ option_list <- list(
 args <- parse_args(OptionParser(option_list=option_list))
 
 subsample <- args$subsample
-if (subsample == 0){
-    subsample <- 500
-}
 
 if(is.null(args$sim)){
     stop("No input prefix specified!")
@@ -47,6 +44,9 @@ m.true <- colSums(df.noNoise)
 scaling <- median(m.true)
 
 set.seed(0)
+if(subsample == 0){
+    subsample <- ncol(df)
+}
 idx <- sort(sample(1:ncol(df), subsample))
 dat <- df[,idx]
 
