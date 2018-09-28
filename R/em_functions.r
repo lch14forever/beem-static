@@ -33,6 +33,7 @@ css <- function(m, p=0.5){
 ##' @param intercept whether to include the intercept
 ##' @param seed seed
 ##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis
+##' @import glmnet
 ##' @description Infer parameters with blasso
 infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=1){
     set.seed(seed)
@@ -111,7 +112,11 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=
 norm <- function(a, b, x){
     res <- -a / (b %*% x)
     res <- res[x!=0]
-    m <- median(res[res>0])
+    if(all(res < 0)){
+        m <- abs(max(res))
+    } else{
+        m <- median(res[res>0])
+    }
     err <- (m * (b %*% x) + a)[,1]/a
     err[x==0] <- 0
     c(m, err)
@@ -125,6 +130,8 @@ norm <- function(a, b, x){
 ##' @param m estimated biomass values
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param center center data or not
+##' @importFrom doMC registerDoMC
+##' @import foreach
 ##' @description E-part of BEEM, estimate model parameters with inferred m
 func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
     ## infer parameter for each OTU
@@ -157,6 +164,8 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
 ##' @param a estimated growth rate values (scaled by self-interaction)
 ##' @param b estimated interaction matrix (scaled by self-interaction)
 ##' @param ncpu number of CPUs (default: 4)
+##' @importFrom doMC registerDoMC
+##' @import foreach
 ##' @description M-part of BEEM, estimate biomass with inferred model parameters
 func.M <- function(dat.tss, a, b, ncpu=4,...){
     registerDoMC(ncpu)
@@ -196,9 +205,9 @@ postProcess <- function(b, dev=1e-5){
 }
 
 
-
-##' @param a
-##' @param b
+##' @title formatOutput
+##' @param a scaled growth rates
+##' @param b scaled interaction matrix
 ##' @param vnames variable names
 ##' @description Function to convert parameter vector a and matrix b to MDSINE's output format
 formatOutput <- function(a, b, vnames){
@@ -243,10 +252,14 @@ beem2param <- function(beem){
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param ncpu number of CPUs (default: 4)
+##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
+##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
+##' @param max.iter maximal number of iterations (default 30)
+##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
-func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, warm.iter=NULL, lambda.choice=1){
+func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1){
     ## pre-processing
     tmp <- preProcess(dat, dev=0)
     dat.tss <- tmp$tss
@@ -290,7 +303,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, warm.iter=NU
             removeIter <- removeIter + 1
         }
 
-        m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0])
+        m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0], na.rm=TRUE)
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
         criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3

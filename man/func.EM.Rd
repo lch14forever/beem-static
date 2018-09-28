@@ -4,13 +4,21 @@
 \alias{func.EM}
 \title{func.EM}
 \usage{
-func.EM(dat, ncpu = 4, scaling = 10000, dev = 2, max.iter = 30,
+func.EM(dat, ncpu = 4, scaling = 10000, dev = Inf, max.iter = 30,
   warm.iter = NULL, lambda.choice = 1)
 }
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
 
 \item{ncpu}{number of CPUs (default: 4)}
+
+\item{scaling}{a scaling factor to keep the median of all biomass constant (default: 1000)}
+
+\item{dev}{deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)}
+
+\item{max.iter}{maximal number of iterations (default 30)}
+
+\item{warm.iter}{number of iterations to run before removing any samples (default: run until convergence and start to remove samples)}
 
 \item{lambda.choice}{1: use lambda.1se for LASSO, 2: use lambda.min for LASSO}
 }
