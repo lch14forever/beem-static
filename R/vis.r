@@ -1,5 +1,5 @@
 ##' @title diagnoseBiomass
-##' 
+##'
 ##' @param beem.out output of a beem run
 ##' @param true.biomass measured/true biomass (default: the biomass of last iteration)
 ##' @param alpha transparency parameter of the biomass lines
@@ -25,12 +25,11 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
             col=col,
             ...
             )
-    lines(x=1:ncol(trace.m),y=apply(rel.err.m,1,median), col='red', lwd=5)    
+    lines(x=1:ncol(trace.m),y=apply(rel.err.m,1,median), col='red', lwd=5)
 }
 
-library(ggplot2)
 ##' @title pcoa
-##' 
+##'
 ##' @param countData OTU/species abundance table (each row is one species, each column is one site)
 ##' @param col a vector of colors for the points
 ##' @description perform a PCoA analysis using Bray-Curtis distance
@@ -45,12 +44,12 @@ pcoa <- function(countData, col='Color'){
     ggplot(dat, aes(x=X1, y=X2, col=col)) +
         geom_point(size=2) +
         labs(x=paste0('CMD1 (' ,round(per.var[1], 2),'%)'),
-             y=paste0('CMD2 (',round(per.var[2], 2),'%)'))    
+             y=paste0('CMD2 (',round(per.var[2], 2),'%)'))
 }
 
 
 ##' @title cluster
-##' 
+##'
 ##' @param countData OTU/species abundance table (each row is one species, each column is one site)
 ##' @description perform a hierachical clustering analysis using Bray-Curtis distance
 ##' @importFrom vegan vegdist

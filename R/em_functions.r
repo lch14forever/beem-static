@@ -1,19 +1,15 @@
-require('foreach')
-require('doMC')
-suppressMessages(library(glmnet))
-
 ######### internal functions #########
 
 
 ##' @title tss
-##' 
+##'
 ##' @param x count matrix (each OTU in one row)
 ##' @description Calculate the relative abundances by dividing the total abundance (Total Sum Sacling)
 tss <- function(x){ apply(x, 2, function(x) x/sum(x)) }
 
 
 ##' @title css
-##' 
+##'
 ##' @param m matrix of data (variables in columns, measurements in rows)
 ##' @param p quantile used for normalization (default: 0.5)
 ##' @description Function to perform cumulative sum scaling (CSS)
@@ -50,7 +46,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=
     ##         message("blasso error caught, using glmnet lasso instead")
     ##         return(NA)
     ##     })
-    ##     if(is.na(res)){method <- 'glmnet'}else{return(b)}            
+    ##     if(is.na(res)){method <- 'glmnet'}else{return(b)}
     ## }
     ## if(method=='ebglmnet'){
     ##     library(EBglmnet)
@@ -125,7 +121,7 @@ norm <- function(a, b, x){
 ##' @title func.E
 ##'
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
-##' @param sample.filter filter out samples contain outliers in Y 
+##' @param sample.filter filter out samples contain outliers in Y
 ##' @param m estimated biomass values
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param center center data or not
@@ -134,7 +130,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
     ## infer parameter for each OTU
     registerDoMC(ncpu)
     p <- nrow(dat.tss)
-    
+
     res <- foreach(i=1:p, .combine=rbind) %dopar% {
         fil <- dat.tss[i,]!=0 & !sample.filter[i,]
         X <- t(rbind(1/m, dat.tss[-i,])[,fil])
@@ -150,7 +146,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         e2 <- rep(NA, ncol(dat.tss))
         e2[fil] <- tmp[-(1:p)]
         c(theta, e2)
-    }    
+    }
     list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,-(1:(p+1))])
 }
 
@@ -163,7 +159,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
 ##' @param ncpu number of CPUs (default: 4)
 ##' @description M-part of BEEM, estimate biomass with inferred model parameters
 func.M <- function(dat.tss, a, b, ncpu=4,...){
-    registerDoMC(ncpu)    
+    registerDoMC(ncpu)
     foreach(i=1:ncol(dat.tss), .combine=rbind) %dopar%{
         x <- dat.tss[,i]
         norm(a, b, x)
@@ -180,7 +176,7 @@ preProcess <- function(dat, dev=1){
     ## filter out species abundances that are too low
     detection_limit <- 1e-4
     dat <- tss(dat)
-    dat[dat<detection_limit] <- 0    
+    dat[dat<detection_limit] <- 0
     ##rowMed <- apply(dat, 1, function(x) median(x[x!=0]))
     ##rowIQR <- apply(dat, 1, function(x) IQR(x[x!=0]))
     rowMAD <- apply(dat, 1, function(x) mad(x[x!=0]))
@@ -220,7 +216,7 @@ formatOutput <- function(a, b, vnames){
 }
 
 ##' @title detectBadSamples
-##' 
+##'
 ##' @param err the errors estimated from regression
 ##' @param threshold threshold to filter out samples
 detectBadSamples <- function(err, threshold){
@@ -239,27 +235,27 @@ beem2param <- function(beem){
     tmp <- beem$trace.p[, ncol(beem$trace.p)]
     a.est <- tmp[1:p]
     b.est <- matrix(tmp[-c(1:p)], p, p)
-    return (list(a.est=a.est, b.est=b.est)) 
+    return (list(a.est=a.est, b.est=b.est))
 }
 
 
 ##' @title func.EM
-##' 
+##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
 func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, warm.iter=NULL, lambda.choice=1){
-    ## pre-processing    
+    ## pre-processing
     tmp <- preProcess(dat, dev=0)
     dat.tss <- tmp$tss
     spNames <- rownames(dat)
-    
+
     ## initialization
     sample.filter.iter <- tmp$sample.filter
     tmp <- css(t(dat.tss))$normFactors
-    m.iter <- scaling * tmp/median(tmp) 
+    m.iter <- scaling * tmp/median(tmp)
     trace.m <- matrix(m.iter)
     trace.p <- matrix(,nrow=nrow(dat)^2+nrow(dat))
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
@@ -284,7 +280,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, warm.iter=NU
         message("M-step: estimating biomass...")
         tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, ncpu)
         m.iter <- tmp.m[,1]
-        err.m <- tmp.m[,-1]        
+        err.m <- tmp.m[,-1]
 
         if(remove_non_eq){
             bad.samples <- detectBadSamples(apply(err.p, 2, median, na.rm = TRUE), dev)
@@ -293,7 +289,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=2, max.iter=30, warm.iter=NU
                            sum(colSums(sample.filter.iter)>0)))
             removeIter <- removeIter + 1
         }
-        
+
         m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0])
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
