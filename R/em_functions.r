@@ -32,30 +32,12 @@ css <- function(m, p=0.5){
 ##' @param method blasso or lm
 ##' @param intercept whether to include the intercept
 ##' @param seed seed
+##' @param alpha the alpha parameter for elastic net (1:lasso [default], 0:ridge)
 ##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis
 ##' @import glmnet
 ##' @description Infer parameters with blasso
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=1){
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.choice=1){
     set.seed(seed)
-    ## if(method=='monomvn'){
-    ##     res <- tryCatch({
-    ##         bl.fit <- blasso(X, Y, verb = 0, T=1000)
-    ##         b <- apply(bl.fit$beta[-c(1:500),],2, median)
-    ##         return(1)
-    ##     },
-    ##     error=function(x){
-    ##         message("blasso error caught, using glmnet lasso instead")
-    ##         return(NA)
-    ##     })
-    ##     if(is.na(res)){method <- 'glmnet'}else{return(b)}
-    ## }
-    ## if(method=='ebglmnet'){
-    ##     library(EBglmnet)
-    ##     tmp1 <- capture.output(tmp <- cv.EBglmnet(X,Y, prior='lasso'))
-    ##     theta <- rep(0, ncol(X))
-    ##     theta[tmp$fit[,1]] <- tmp$fit[,3]
-    ##     return(theta)
-    ## }
     if(method=='lm'){
         return(as.numeric(coef(lm(Y~X+0))))
     }
@@ -65,7 +47,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=
         maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
-                         penalty.factor=penalty)
+                         penalty.factor=penalty, alpha=alpha)
         ## fit.auto <- cv.glmnet(X[idx,], Y[idx], intercept=intercept,
         ##                       penalty.factor=penalty)
 
@@ -77,11 +59,10 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, lambda.choice=
         ## }else{
         ##     lambda <- rev(with(fit, seq(lambda.min/20, lambda.min*20, lambda.min/20)))
         ## }
+        print(alpha)
         lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*10, length.out = 200)
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
-                         ## lambda.min.ratio = 1e-16,
-                         ## nlambda=500,
-                         penalty.factor=penalty)
+                         penalty.factor=penalty, alpha=alpha)
         coefs <- coef(fit, s=ifelse(lambda.choice==1, 'lambda.1se', 'lambda.min'))[-1]
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
         return(c(coefs, e2))
@@ -287,7 +268,9 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
         message("E-step: estimating scaled parameters...")
         ##if(iter==1) method <- 'lm'
         if(iter>=1) method <- 'glmnet'
-        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice)
+        ## TODO: is a switch from lasso to elastic net needed?
+        alpha <- 1 ##ifelse(iter>max.iter/4, 0.5, 1)
+        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice, alpha=alpha)
         err.p <- tmp.p$e2
         ## plot(colSums(err.p, na.rm = TRUE))
         message("M-step: estimating biomass...")
