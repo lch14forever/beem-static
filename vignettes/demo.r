@@ -1,7 +1,9 @@
 ############################################################################
 ## Preprocessing
 #### Generate simulated data with noise
-df <- read.table('../data/demo.n500_p20_eq1.counts.txt', head=F, row.names=1, sep='\t')
+
+devtools::use_data_raw()
+df <- read.table('data/demo.n500_p20_eq1.counts.txt', head=F, row.names=1, sep='\t')
 
 aux.poisson <- function(v, depth){
     v <- round(v/sum(v) * depth)
@@ -9,7 +11,7 @@ aux.poisson <- function(v, depth){
 }
 df.noise <- apply(df, 2, aux.poisson, depth=5000)
 
-params <- read.table('../data/demo.n500_p20_eq1.truth.txt', head=T)
+params <- read.table('data/demo.n500_p20_eq1.truth.txt', head=T)
 
 truth2param <- function(truth){
     a.truth <- truth[is.na(truth$source_taxon),3]
@@ -21,31 +23,20 @@ truth2param <- function(truth){
     return(list(a.truth=a.truth, b.truth=b.truth))
 }
 
-auc.b <- function(b.est, b.true){
-    diag(b.est) <- NA
-    diag(b.true) <- NA
-    est <- c(b.est)
-    lab <- c(b.true)
-    est <- abs(est[!is.na(est)])
-    lab <- lab[!is.na(lab)]
-    lab <- (lab!=0 ) *1
-    pROC::plot.roc(lab,est, print.auc = TRUE)
-}
-
 scaled.params <- truth2param(params)
 
-out <- list(dat.w.noise=df.noise, dat.wo.noise=df,
+beemDemo <- list(dat.w.noise=df.noise, dat.wo.noise=df,
             scaled.params=scaled.params,
             original.params=params, biomass.true=colSums(df))
 
-saveRDS(out, '../data/demo_dat.rds')
+devtools::use_data(beemDemo)
+devtools::load_all()
 
 ##############################################################################
 
-dat <- readRDS('../data/demo_dat.rds')
-attach(dat)
+data("beemDemo")
 
-res <- func.EM(dat.w.noise, ncpu=10, scaling=median(dat$biomass.true), max.iter=40)
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true))
 
 diagnoseBiomass(res, true.biomass = biomass.true)
 
@@ -53,15 +44,21 @@ plot(res$trace.m[,30], biomass.true, xlab='BEEM biomass estimation', ylab='True 
 
 est <- beem2param(res)
 
-plot(est$a.est, scaled.params$a.truth)
+par(mfrow=c(1,2))
+plot(est$a.est, scaled.params$a.truth, xlab='BEEM estimation', ylab='Truth', main='Growth rates')
+auc.b(est$b.est, scaled.params$b.truth, main='Interaction matrix')
 
-plot(est$b.est, scaled.params$b.truth)
+
+
+spearman <- cor(t(dat.w.noise), method='spearman')
 
 
 library(SpiecEasi)
-
 se <- spiec.easi(t(dat.w.noise), method='mb')
-graph <- as.matrix(getOptMerge(se))
+se.stab <- as.matrix(getOptMerge(se))
 
-auc.b(graph, scaled.params$b.truth)
-auc.b(est$b.est, scaled.params$b.truth)
+par(mfrow=c(1,2))
+auc.b(spearman, scaled.params$b.truth, is.association = TRUE, main='Spearman correlation')
+auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPEIC-EASI')
+
+

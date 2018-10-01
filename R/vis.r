@@ -60,3 +60,45 @@ cluster <- function(countData){
     hc
 }
 
+##' @title auc.b
+##'
+##' @param b.est The estimated interaction network (This can be a correlation matrix and the edges will be ranked based on the absolute value of the correlation coefficents)
+##' @param b.true The true interaction network
+##' @param is.association b.est is an association structure
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @description plot ROC curve with AUC for the interaction graph (interaction signs are ignored)
+##' @export
+auc.b <- function(b.est, b.true, is.association=FALSE, ...){
+    if (!requireNamespace("pROC", quietly = TRUE)) {
+        stop("Package \"pROC\" needed for this function to work. Please install it.",
+             call. = FALSE)
+    }
+    diag(b.est) <- NA
+    diag(b.true) <- NA
+    if(is.association){
+        b.true <- interaction2association(b.true)
+        est <- b.est[lower.tri(b.est)]
+        lab <- b.true[lower.tri(b.true)]
+    }else{
+        est <- c(b.est)
+        lab <- c(b.true)
+    }
+    est <- abs(est[!is.na(est)])
+    lab <- lab[!is.na(lab)]
+    lab <- (lab!=0 ) *1
+    pROC::plot.roc(lab,est, print.auc = TRUE, ...)
+}
+
+##' @title interaction2association
+##'
+##' @param m an interaction matrix
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @description Convert interaction matrix to association matrix by taking the average of the symmetric entries
+interaction2association <- function(m){
+    m.cp <- m
+    tmp <- (m[lower.tri(m)] + t(m)[lower.tri(m)])/2
+    m.cp[lower.tri(m.cp)] <- tmp
+    m.cp[upper.tri(m.cp)] <- tmp
+    m.cp
+}
+

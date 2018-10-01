@@ -10,7 +10,8 @@ Imports:
     doMC,
     glmnet
 Suggests:
-    ggplot2
+    ggplot2,
+    pROC
 License: MIT
 Encoding: UTF-8
 LazyData: true

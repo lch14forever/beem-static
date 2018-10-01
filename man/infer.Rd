@@ -4,7 +4,7 @@
 \alias{infer}
 \title{infer}
 \usage{
-infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
+infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0, alpha = 1,
   lambda.choice = 1)
 }
 \arguments{
@@ -17,6 +17,8 @@ infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
 \item{intercept}{whether to include the intercept}
 
 \item{seed}{seed}
+
+\item{alpha}{the alpha parameter for elastic net (1:lasso [default], 0:ridge)}
 
 \item{lambda.choice}{1: use lambda.1se for analysis, 2: use lambda.min for analysis}
 }
