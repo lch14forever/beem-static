@@ -59,6 +59,6 @@ se.stab <- as.matrix(getOptMerge(se))
 
 par(mfrow=c(1,2))
 auc.b(spearman, scaled.params$b.truth, is.association = TRUE, main='Spearman correlation')
-auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPEIC-EASI')
+auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPIEC-EASI')
 
 
