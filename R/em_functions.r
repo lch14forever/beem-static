@@ -227,6 +227,16 @@ beem2param <- function(beem){
     return (list(a.est=a.est, b.est=b.est))
 }
 
+##' @title beem2biomass
+##'
+##' @param beem a BEEM object
+##' @description extract biomass estimates from a BEEM object
+##' @export
+beem2biomass <- function(beem){
+    niter <- ncol(beem$trace.m)
+    return (beem$trace.m[,niter])
+}
+
 
 ##' @title func.EM
 ##'
@@ -237,13 +247,21 @@ beem2param <- function(beem){
 ##' @param max.iter maximal number of iterations (default 30)
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO
+##' @param alpha The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
-func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1){
+func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1, alpha=1){
+    
     ## pre-processing
     tmp <- preProcess(dat, dev=0)
     dat.tss <- tmp$tss
     spNames <- rownames(dat)
+
+    ## ensure valid samples
+    temp <- colSums(dat.tss, na.rm = TRUE) == 0
+    if(any(temp)){
+        stop(paste0('Sample ', which(temp), ' has zero total abudance...'))
+    }
 
     ## initialization
     sample.filter.iter <- tmp$sample.filter
@@ -268,7 +286,6 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
         ##if(iter==1) method <- 'lm'
         if(iter>=1) method <- 'glmnet'
         ## TODO: is a switch from lasso to elastic net needed?
-        alpha <- 1 ##ifelse(iter>max.iter/4, 0.5, 1)
         tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice, alpha=alpha)
         err.p <- tmp.p$e2
         ## plot(colSums(err.p, na.rm = TRUE))
