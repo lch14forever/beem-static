@@ -59,7 +59,6 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         ## }else{
         ##     lambda <- rev(with(fit, seq(lambda.min/20, lambda.min*20, lambda.min/20)))
         ## }
-        print(alpha)
         lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*10, length.out = 200)
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
                          penalty.factor=penalty, alpha=alpha)
