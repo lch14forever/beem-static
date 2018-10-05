@@ -37,7 +37,7 @@ devtools::load_all()
 data("beemDemo")
 attach(beemDemo)
 
-res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=20)
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=30)
 
 diagnoseFit(res, dat.w.noise, annotate = FALSE)
 

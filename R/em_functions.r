@@ -44,24 +44,19 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         return(as.numeric(coef(lm(Y~X+0))))
     }
     if(method=='glmnet'){
-        lambda.init <- rev(10^(seq(-7,-1)))
+        lambda.init <- rev(10^(seq(-9,-1, length.out = 20)))
         penalty <- c(0,rep(1, ncol(X)-1))
         maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty, alpha=alpha)
-        ## fit.auto <- cv.glmnet(X[idx,], Y[idx], intercept=intercept,
-        ##                       penalty.factor=penalty)
-
-        ## if (lambda.choice==1){
-        ##     lambda <- seq(fit$lambda.1se/20, max(fit.auto$lambda), length.out = 100)
-        ##     lambda <- rev(seq((lambda.1se)^(1/2)/5,
-        ##     (lambda.1se)^(1/2)*5,
-        ##     length.out = 100)^2)
+        
+        lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*10, length.out = 100)
+        ## if(fit$lambda.min==fit$lambda.1se){
+        ##     lambda <- rev(seq(fit$lambda.min/2, fit$lambda.1se, length.out = 30))
         ## }else{
-        ##     lambda <- rev(with(fit, seq(lambda.min/20, lambda.min*20, lambda.min/20)))
+        ##     lambda <- rev(seq(fit$lambda.min, fit$lambda.1se, length.out = 30))
         ## }
-        lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*10, length.out = 200)
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
                          penalty.factor=penalty, alpha=alpha)
         coefs <- coef(fit, s=ifelse(lambda.choice==1, 'lambda.1se', 'lambda.min'))[-1]
@@ -262,10 +257,11 @@ beem2biomass <- function(beem){
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO
 ##' @param alpha The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
+##' @param debug output debugging information (default FALSE)
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
 ##' @author Chenhao Li, Niranjan Nagarajan
-func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1, alpha=1){
+func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1, alpha=1, debug=FALSE){
     
     ## pre-processing
     tmp <- preProcess(dat, dev=0)
@@ -282,6 +278,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
     sample.filter.iter <- tmp$sample.filter
     tmp <- css(t(dat.tss))$normFactors
     m.iter <- scaling * tmp/median(tmp)
+    ## m.iter <- rnorm(length(m.iter), scaling, scaling/10) ## start with random biomass
     trace.m <- matrix(m.iter)
     trace.p <- matrix(,nrow=nrow(dat)^2+nrow(dat))
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
@@ -303,7 +300,11 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
         ## TODO: is a switch from lasso to elastic net needed?
         tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice, alpha=alpha)
         err.p <- tmp.p$e2
-        ## plot(colSums(err.p, na.rm = TRUE))
+        if(debug){
+            print(rowSums(tmp.p$b!=0))
+            plot(1-rowSums(err.p, na.rm = TRUE)/apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2)))
+            abline(h=0.5)
+        }
         message("M-step: estimating biomass...")
         tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, ncpu)
         m.iter <- tmp.m[,1]
