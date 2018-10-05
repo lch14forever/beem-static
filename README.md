@@ -2,7 +2,9 @@
 
 ## Description
 
-BEEM-{Static} uses an Expectation Maximization (EM)-like alogirithm to estimate both **total biomass values**, **growth rates** and **interactions** (generalized Lotka-Volterra parameters), as motivated by the core idea of the original [BEEM](https://github.com/lch14forever/BEEM) algorithm. BEEM-{static}, however, is designed to handle **cross-sectional** microbial profiling data with an assumption that large fraction of the samples are at their steady states. 
+BEEM-{Static} uses an Expectation Maximization (EM)-like alogirithm to estimate **total biomass values**, **growth rates** and **interactions** (generalized Lotka-Volterra parameters), as motivated by the core idea of the original [BEEM](https://github.com/lch14forever/BEEM) algorithm. BEEM-{static}, however, is designed to handle **cross-sectional** microbial profiling data with an assumption that a large fraction of the samples is at the steady state. 
+
+**Note**: This package is under active development.
 
 ## Installation
 
@@ -19,6 +21,7 @@ The demo dataset is a simulated community of 20 species and 500 samples. All of 
 
 ```r
 data("beemDemo")
+attach(beemDemo)
 
 ## Use `?beemDemo` to see the help of the fields in this dataset
 ```
@@ -54,8 +57,18 @@ auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPIEC-EASI')
 ### Run BEEM-{Static}
 
 ```r
-res <- func.EM(df.noise, ncpu=4, scaling=median(biomass.true))
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true))
 ```
+
+#### Investigating model fit
+
+We can check the [coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination) ($R^2$) for each species. A high $R2$ (close to 1) value indicates that the variation in the data is well explained by the model.
+
+```r
+diagnoseFit(res, dat.w.noise, annotate = FALSE)
+```
+
+![](vignettes/beem_fit.png)
 
 #### Estimated parameters vs. true parameters
 ```r
