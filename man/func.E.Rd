@@ -20,3 +20,6 @@ func.E(dat.tss, m, sample.filter, ncpu = 4, center = FALSE, ...)
 \description{
 E-part of BEEM, estimate model parameters with inferred m
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}

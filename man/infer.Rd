@@ -25,3 +25,6 @@ infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0, alpha = 1,
 \description{
 Infer parameters with blasso
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}

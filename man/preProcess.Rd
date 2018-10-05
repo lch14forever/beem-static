@@ -16,3 +16,6 @@ preProcess(dat, dev = 1)
 \description{
 pre-process data
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}

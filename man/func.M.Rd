@@ -18,3 +18,6 @@ func.M(dat.tss, a, b, ncpu = 4, ...)
 \description{
 M-part of BEEM, estimate biomass with inferred model parameters
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}

@@ -12,3 +12,6 @@ beem2param(beem)
 \description{
 extract parameter estimates from a BEEM object
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}

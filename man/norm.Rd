@@ -22,3 +22,8 @@ estimate biomass with linear regression
 
 estimate biomass with linear regression
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+
+Chenhao Li, Niranjan Nagarajan
+}

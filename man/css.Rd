@@ -14,3 +14,6 @@ css(m, p = 0.5)
 \description{
 Function to perform cumulative sum scaling (CSS)
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}

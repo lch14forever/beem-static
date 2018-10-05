@@ -16,3 +16,6 @@ formatOutput(a, b, vnames)
 \description{
 Function to convert parameter vector a and matrix b to MDSINE's output format
 }
+\author{
+Chenhao Li, Niranjan Nagarajan
+}
