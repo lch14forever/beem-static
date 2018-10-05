@@ -40,7 +40,7 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
 diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
-    dat.tss <- tss(dat)    
+    dat.tss <- tss(dat)
     r_ss <- rowSums(beem.out$err.p, na.rm=TRUE)
     t_ss <- apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2))
     r2 <- 1-r_ss/t_ss
@@ -50,13 +50,41 @@ diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
         geom_point(size=2) +
         geom_abline(intercept=thre, slope=0, lty=2, size=1.5, col='red') +
         labs(x='Species', y=expression(R^{2})) +
-        coord_flip() + 
+        coord_flip() +
         theme_bw()
     if(annotate){
         p <- p +
-            geom_text_repel(data=subset(plot.dat, r2>thre)) 
+            geom_text_repel(data=subset(plot.dat, r2>thre))
     }
     p
+}
+
+##' @title showInteraction
+##'
+##' @param beem.out output of a beem run
+##' @param dat input data for the beem run
+##' @import igraph
+##' @import ggraph
+##' @description generate a plot for the interaction network inferred using ggraph
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @export
+showInteraction <- function(beem.out, dat){
+    b <- beem2param(beem.out)$b
+    diag(b) <- 0
+    g <- graph.adjacency(b, mode='directed', weighted='I')
+    V(g)$label <- rownames(dat)
+    V(g)$RelativeAbundance <- rowMeans(dat)
+    E(g)$Type <- ifelse( E(g)$I >0, '+', '-')
+    E(g)$Strength <- abs(E(g)$I)
+    g.simple <- delete.vertices(g, V(g)[degree(g) == 0])
+    ggraph(g.simple, layout = 'fr')+#, circular=TRUE) +
+        geom_edge_arc(aes(col=Type, width=Strength),arrow = arrow(length = unit(2, 'mm')),
+                      curvature = 0.1, alpha=0.8,
+                      end_cap=circle(1.5, 'mm'), start_cap=circle(1.5, 'mm')) +
+        geom_node_point(pch=1, aes(size=RelativeAbundance)) +
+        geom_node_text(aes(label = label), size=2, repel = TRUE) +
+        scale_edge_width(range = c(0.5,1.5), guide=FALSE) +
+        theme_void()
 }
 
 ##' @title pcoa
