@@ -62,7 +62,7 @@ res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true))
 
 #### Investigating model fit
 
-We can check the [coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination) ($R^2$) for each species. A high $R2$ (close to 1) value indicates that the variation in the data is well explained by the model.
+We can check the [coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination) (R<sup>2</sup>) for each species. A high R<sup>2</sup> (close to 1) value indicates that the variation in the data is well explained by the model.
 
 ```r
 diagnoseFit(res, dat.w.noise, annotate = FALSE)
