@@ -28,6 +28,37 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
     lines(x=1:ncol(trace.m),y=apply(rel.err.m,1,median), col='red', lwd=5)
 }
 
+##' @title diagnoseFit
+##'
+##' @param beem.out output of a beem run
+##' @param dat input data for the beem run
+##' @param thre threshold of R2 to show the label
+##' @param annotate display the label for the species with R2 > thre
+##' @import ggplot2
+##' @import ggrepel
+##' @description plot the R2 value for each species
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @export
+diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
+    dat.tss <- tss(dat)    
+    r_ss <- rowSums(beem.out$err.p, na.rm=TRUE)
+    t_ss <- apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2))
+    r2 <- 1-r_ss/t_ss
+    plot.dat <- data.frame(r2=r2, species=rownames(dat.tss))
+
+    p <- ggplot(plot.dat, aes(y=r2, x=species, label=species)) +
+        geom_point(size=2) +
+        geom_abline(intercept=thre, slope=0, lty=2, size=1.5, col='red') +
+        labs(x='Species', y=expression(R^{2})) +
+        coord_flip() + 
+        theme_bw()
+    if(annotate){
+        p <- p +
+            geom_text_repel(data=subset(plot.dat, r2>thre)) 
+    }
+    p
+}
+
 ##' @title pcoa
 ##'
 ##' @param countData OTU/species abundance table (each row is one species, each column is one site)

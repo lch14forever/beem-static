@@ -1,10 +1,10 @@
 ######### internal functions #########
 
-
 ##' @title tss
 ##'
 ##' @param x count matrix (each OTU in one row)
 ##' @description Calculate the relative abundances by dividing the total abundance (Total Sum Sacling)
+##' @author Chenhao Li, Niranjan Nagarajan
 tss <- function(x){ apply(x, 2, function(x) x/sum(x)) }
 
 
@@ -13,6 +13,7 @@ tss <- function(x){ apply(x, 2, function(x) x/sum(x)) }
 ##' @param m matrix of data (variables in columns, measurements in rows)
 ##' @param p quantile used for normalization (default: 0.5)
 ##' @description Function to perform cumulative sum scaling (CSS)
+##' @author Chenhao Li, Niranjan Nagarajan
 css <- function(m, p=0.5){
     m[m==0] <- NA
     ## find the quantile in each sample
@@ -36,6 +37,7 @@ css <- function(m, p=0.5){
 ##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis
 ##' @import glmnet
 ##' @description Infer parameters with blasso
+##' @author Chenhao Li, Niranjan Nagarajan
 infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.choice=1){
     set.seed(seed)
     if(method=='lm'){
@@ -73,6 +75,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
 ##' @param Y response
 ##' @param X predictors
 ##' @description estimate biomass with linear regression
+##' @author Chenhao Li, Niranjan Nagarajan
 ## norm <- function(Y, X){
 ##     wrong.sign <- sign(X) != sign(Y)
 ##     outliers <- abs(Y - median(Y)) > 2 * IQR(Y) | abs(X - median(X)) > 2 * IQR(X) | wrong.sign
@@ -89,6 +92,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
 ##' @param b estimated interaction matrix (scaled by self-interaction)
 ##' @param x abundances in one sample
 ##' @description estimate biomass with linear regression
+##' @author Chenhao Li, Niranjan Nagarajan
 norm <- function(a, b, x){
     res <- -a / (b %*% x)
     res <- res[x!=0]
@@ -113,6 +117,7 @@ norm <- function(a, b, x){
 ##' @importFrom doMC registerDoMC
 ##' @import foreach
 ##' @description E-part of BEEM, estimate model parameters with inferred m
+##' @author Chenhao Li, Niranjan Nagarajan
 func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
     ## infer parameter for each OTU
     registerDoMC(ncpu)
@@ -147,6 +152,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
 ##' @importFrom doMC registerDoMC
 ##' @import foreach
 ##' @description M-part of BEEM, estimate biomass with inferred model parameters
+##' @author Chenhao Li, Niranjan Nagarajan
 func.M <- function(dat.tss, a, b, ncpu=4,...){
     registerDoMC(ncpu)
     foreach(i=1:ncol(dat.tss), .combine=rbind) %dopar%{
@@ -161,6 +167,7 @@ func.M <- function(dat.tss, a, b, ncpu=4,...){
 ##' @param dev dev * IQR from median will be filtered out (default: Inf, nothing to remove)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @description pre-process data
+##' @author Chenhao Li, Niranjan Nagarajan
 preProcess <- function(dat, dev=1){
     ## filter out species abundances that are too low
     detection_limit <- 1e-4
@@ -179,6 +186,7 @@ preProcess <- function(dat, dev=1){
 ##' @param b scaled interaction matrix (diagonal/self-interaction is -1)
 ##' @param dev scale of the interaction < dev * 1, the value will be set to 0
 ##' @description post-process parameters to remove small entries
+##' @author Chenhao Li, Niranjan Nagarajan
 postProcess <- function(b, dev=1e-5){
     b[abs(b)<dev] <- 0
     b
@@ -190,6 +198,7 @@ postProcess <- function(b, dev=1e-5){
 ##' @param b scaled interaction matrix
 ##' @param vnames variable names
 ##' @description Function to convert parameter vector a and matrix b to MDSINE's output format
+##' @author Chenhao Li, Niranjan Nagarajan
 formatOutput <- function(a, b, vnames){
     suppressMessages(require(reshape2))
     p <- length(a)
@@ -208,17 +217,21 @@ formatOutput <- function(a, b, vnames){
 ##'
 ##' @param err the errors estimated from regression
 ##' @param threshold threshold to filter out samples
+##' @author Chenhao Li, Niranjan Nagarajan
 detectBadSamples <- function(err, threshold){
     score <- abs(err - median(err, na.rm = TRUE))/IQR(err, na.rm = TRUE)
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
 
+######### Exported functions #########
+
 ##' @title beem2param
 ##'
 ##' @param beem a BEEM object
 ##' @description extract parameter estimates from a BEEM object
 ##' @export
+##' @author Chenhao Li, Niranjan Nagarajan
 beem2param <- function(beem){
     p <- ncol(beem$err.m)
     tmp <- beem$trace.p[, ncol(beem$trace.p)]
@@ -232,6 +245,7 @@ beem2param <- function(beem){
 ##' @param beem a BEEM object
 ##' @description extract biomass estimates from a BEEM object
 ##' @export
+##' @author Chenhao Li, Niranjan Nagarajan
 beem2biomass <- function(beem){
     niter <- ncol(beem$trace.m)
     return (beem$trace.m[,niter])
@@ -250,6 +264,7 @@ beem2biomass <- function(beem){
 ##' @param alpha The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
+##' @author Chenhao Li, Niranjan Nagarajan
 func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1, alpha=1){
     
     ## pre-processing

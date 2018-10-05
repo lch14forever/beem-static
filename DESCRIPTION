@@ -11,6 +11,7 @@ Imports:
     glmnet
 Suggests:
     ggplot2,
+    ggrepel,
     pROC
 License: MIT
 Encoding: UTF-8
