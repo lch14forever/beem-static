@@ -63,21 +63,22 @@ diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
 ##'
 ##' @param beem.out output of a beem run
 ##' @param dat input data for the beem run
+##' @param layout graph layout (see the documentation for ggraph)
 ##' @import igraph
 ##' @import ggraph
-##' @description generate a plot for the interaction network inferred using ggraph
+##' @description plot the interaction network inferred by beem (using ggraph)
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
-showInteraction <- function(beem.out, dat){
-    b <- beem2param(beem.out)$b
+showInteraction <- function(beem.out, dat, layout='fr'){
+    b <- t(beem2param(beem.out)$b) ## need transpose
     diag(b) <- 0
     g <- graph.adjacency(b, mode='directed', weighted='I')
     V(g)$label <- rownames(dat)
-    V(g)$RelativeAbundance <- rowMeans(dat)
+    V(g)$RelativeAbundance <- rowMeans(tss(dat))
     E(g)$Type <- ifelse( E(g)$I >0, '+', '-')
     E(g)$Strength <- abs(E(g)$I)
     g.simple <- delete.vertices(g, V(g)[degree(g) == 0])
-    ggraph(g.simple, layout = 'fr')+#, circular=TRUE) +
+    ggraph(g.simple, layout = layout)+#, circular=TRUE) +
         geom_edge_arc(aes(col=Type, width=Strength),arrow = arrow(length = unit(2, 'mm')),
                       curvature = 0.1, alpha=0.8,
                       end_cap=circle(1.5, 'mm'), start_cap=circle(1.5, 'mm')) +

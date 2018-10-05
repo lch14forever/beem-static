@@ -37,7 +37,7 @@ devtools::load_all()
 data("beemDemo")
 attach(beemDemo)
 
-res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true))
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=20)
 
 diagnoseFit(res, dat.w.noise, annotate = FALSE)
 
@@ -46,6 +46,8 @@ diagnoseBiomass(res, true.biomass = biomass.true)
 plot(res$trace.m[,30], biomass.true, xlab='BEEM biomass estimation', ylab='True biomass')
 
 est <- beem2param(res)
+
+showInteraction(res, dat.w.noise)
 
 par(mfrow=c(1,2))
 plot(est$a.est, scaled.params$a.truth, xlab='BEEM estimation', ylab='Truth', main='Growth rates')

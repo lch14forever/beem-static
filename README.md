@@ -80,6 +80,14 @@ auc.b(est$b.est, scaled.params$b.truth, main='Interaction matrix')
 
 ![](vignettes/param_compare.png)
 
+#### Dispaly interaction network
+
+```r
+showInteraction(res, dat.w.noise)
+```
+
+![](vignettes/network.png)
+
 #### Estimated biomass vs. true biomass
 
 ```r
