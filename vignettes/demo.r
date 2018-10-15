@@ -62,8 +62,10 @@ library(SpiecEasi)
 se <- spiec.easi(t(dat.w.noise), method='mb')
 se.stab <- as.matrix(getOptMerge(se))
 
-par(mfrow=c(1,2))
+
+par(mfrow=c(1,3), cex=1)
 auc.b(spearman, scaled.params$b.truth, is.association = TRUE, main='Spearman correlation')
 auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPIEC-EASI')
+auc.b(est$b.est, scaled.params$b.truth, main='BEEM-Static')
 
 
