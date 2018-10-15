@@ -2,7 +2,7 @@
 
 ## Description
 
-BEEM-static is an R package for estimating microbial interactions from **cross-sectional** microbiome profiling data based on the generalized Lotka-Volterra model (gLVM). BEEM-static uses an expectation maximization (EM) like alogrithm to jointly estimate total biomass and gLVM parameters, similarly to the core idea of the original BEEM algorithm for longitudinal data ([Reference](https://www.biorxiv.org/content/early/2018/07/17/288803), [Source code](https://github.com/CSB5/BEEM)). BEEM-static assumes that a large fraction (>70%) of samples are at the equilibrium states, and attempts to automatically detect samples that deviates from the equilibrium. Besides, we also implement functions for visualising and diagnosing the fitted model.
+BEEM-static is an R package for estimating microbial interactions from **cross-sectional** microbiome profiling data based on the generalized Lotka-Volterra model (gLVM). BEEM-static uses an expectation maximization (EM) like alogrithm to jointly estimate total biomass and gLVM parameters, similarly to the core idea of the original BEEM algorithm for longitudinal data ([Reference](https://www.biorxiv.org/content/early/2018/07/17/288803), [Source code](https://github.com/CSB5/BEEM)). BEEM-static assumes that a large fraction (>70%) of samples are at the equilibrium states, and attempts to automatically detect samples that deviate from the equilibrium. Besides, we also implement functions for visualising and diagnosing the fitted model.
 
 **Note**: This package is under active development. Please record the commit ID for reproducibility.
 
@@ -28,6 +28,8 @@ attach(beemDemo)
 
 ### Analysis with BEEM-static
 
+BEEM-static is run by calling the `func.EM` function.
+
 ```r
 res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true))
 ```
@@ -43,7 +45,7 @@ showInteraction(res, dat.w.noise)
 
 #### Estimating biomass
 
-BEEM-static also estimates the biomass for each sample. Here we can compare the estimated biomass with the true biomass on this simulated dataset.
+BEEM-static also estimates the biomass for each sample (retrieved by the `beem2biomass` function). Here we can compare the estimated biomass with the true biomass on this simulated dataset.
 
 ```r
 plot(beem2biomass(res), biomass.true, xlab='BEEM biomass estimation', ylab='True biomass')
@@ -62,7 +64,7 @@ diagnoseFit(res, dat.w.noise, annotate = FALSE)
 
 ### Comparing BEEM-static with correlation based methods
 
-We now run two popular methods for inferring microbial interactions on our simulated data. Both methods try to infer an association matrix as a proxy for the interaction matrix.
+We now run two popular methods for inferring microbial interactions on our simulated data. Both methods try to infer a correlation matrix as a proxy for the interaction matrix.
 
 1. Using an naive Spearman's correlation method
 
@@ -84,7 +86,7 @@ se.stab <- as.matrix(getOptMerge(se))
 est <- beem2param(res)
 ```
 
-We compare the receiver operating characteristic (ROC) curve with computed area under the curve (AUC).
+We implement a function `auc.b` for ploting the receiver operating characteristic (ROC) curve with computed area under the curve (AUC). We compare the ROC curves of the above three methods.
 
 ```r
 par(mfrow=c(1,3))
