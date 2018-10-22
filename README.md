@@ -4,7 +4,7 @@
  
 ## Description
 
-<img src="https://raw.githubusercontent.com/lch14forever/BEEM-static/master/logo.JPG" height="200" align="right" />
+<img src="logo.JPG" height="200" align="right" />
 
 BEEM-static is an R package for estimating directed microbial interactions from **cross-sectional** microbiome profiling data based on the generalized Lotka-Volterra model (gLVM). Extending the core idea of the original BEEM algorithm for longitudinal data ([Reference](https://www.biorxiv.org/content/early/2018/07/17/288803), [Source code](https://github.com/CSB5/BEEM)), BEEM-static directly works with **relative abundances** to jointly estimate total biomass and gLVM parameters, thus eliminating the needs for experimentally quantifying absolute abundances. BEEM-static identifies microbiomes that are not at equilibrium states and automatically filters such samples out from the analysis. The package also provides the user with a collection of handy functions for visualising and diagnosing the fitted model.
 
