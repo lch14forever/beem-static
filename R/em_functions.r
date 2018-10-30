@@ -50,8 +50,8 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty, alpha=alpha)
-        
-        lambda <- exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se), length.out = 100))
+
+        lambda <- exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se*2), length.out = 100))
         ## if(fit$lambda.min==fit$lambda.1se){
         ##     lambda <- rev(seq(fit$lambda.min/2, fit$lambda.1se, length.out = 30))
         ## }else{
@@ -128,7 +128,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
             Y <- Y-mean(Y)
             X <- X-rowMeans(X)
         }
-        theta <- rep(0, nrow(dat.tss)+1)
+        theta <- rep(0, p+1)
         theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
         tmp <- infer(Y,X,...)
         theta[-(i+1)] <- tmp[1:p]
@@ -264,7 +264,7 @@ beem2biomass <- function(beem){
 ##' @export
 ##' @author Chenhao Li, Niranjan Nagarajan
 func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1, alpha=1, debug=FALSE){
-    
+
     ## pre-processing
     dat.init <- preProcess(dat, dev=0)
     dat.tss <- dat.init$tss
@@ -282,7 +282,6 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
     m.iter <- scaling * tmp/median(tmp)
     ## m.iter <- rnorm(length(m.iter), scaling, scaling/10) ## start with random biomass
     trace.m <- matrix(m.iter)
-    trace.p <- matrix(,nrow=nrow(dat)^2+nrow(dat))
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
     trace.p <- data.frame(name=trace.p)
@@ -313,7 +312,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
         err.m <- tmp.m[,-1]
 
         if(remove_non_eq){
-            ## clear up removed samples every 5 iterations
+            ## clear up removed samples every X iterations
             if (iter %% 5 == 0 ) {
                 sample.filter.iter <- dat.init$sample.filter
             }
@@ -332,12 +331,11 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
             message("Start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
-        if (iter > 5 && !remove_non_eq && criterion) {
+        if (iter > 5 && !remove_non_eq && criterion && is.finite(dev)) {
             message("Converged and start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
-
-        if (removeIter > 5 && remove_non_eq && criterion) {
+        if (((removeIter > 5 && remove_non_eq) || is.infinite(dev)) && criterion) {
             message("Converged!")
             break
         }
