@@ -51,7 +51,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty, alpha=alpha)
         
-        lambda <- seq(fit$lambda.1se/20, fit$lambda.1se*10, length.out = 100)
+        lambda <- exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se), length.out = 100))
         ## if(fit$lambda.min==fit$lambda.1se){
         ##     lambda <- rev(seq(fit$lambda.min/2, fit$lambda.1se, length.out = 30))
         ## }else{
@@ -60,6 +60,8 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
                          penalty.factor=penalty, alpha=alpha)
         coefs <- coef(fit, s=ifelse(lambda.choice==1, 'lambda.1se', 'lambda.min'))[-1]
+        ##coefs <- coef(fit, s= (fit$lambda.min + fit$lambda.1se)/2  )[-1]
+        ##plot(fit)
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
         return(c(coefs, e2))
     }
@@ -264,8 +266,8 @@ beem2biomass <- function(beem){
 func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=NULL, lambda.choice=1, alpha=1, debug=FALSE){
     
     ## pre-processing
-    tmp <- preProcess(dat, dev=0)
-    dat.tss <- tmp$tss
+    dat.init <- preProcess(dat, dev=0)
+    dat.tss <- dat.init$tss
     spNames <- rownames(dat)
 
     ## ensure valid samples
@@ -275,7 +277,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
     }
 
     ## initialization
-    sample.filter.iter <- tmp$sample.filter
+    sample.filter.iter <- dat.init$sample.filter
     tmp <- css(t(dat.tss))$normFactors
     m.iter <- scaling * tmp/median(tmp)
     ## m.iter <- rnorm(length(m.iter), scaling, scaling/10) ## start with random biomass
@@ -311,6 +313,10 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
         err.m <- tmp.m[,-1]
 
         if(remove_non_eq){
+            ## clear up removed samples every 5 iterations
+            if (iter %% 5 == 0 ) {
+                sample.filter.iter <- dat.init$sample.filter
+            }
             bad.samples <- detectBadSamples(apply(err.p, 2, median, na.rm = TRUE), dev)
             sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter
             message(paste0("Number of samples removed (detected to be non-static): ",
