@@ -34,7 +34,7 @@ css <- function(m, p=0.5){
 ##' @param intercept whether to include the intercept
 ##' @param seed seed
 ##' @param alpha the alpha parameter for elastic net (1:lasso [default], 0:ridge)
-##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis
+##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis, 3: mixed
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Niranjan Nagarajan
@@ -51,17 +51,19 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
                          penalty.factor=penalty, alpha=alpha)
 
-        lambda <- exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se*2), length.out = 100))
-        ## if(fit$lambda.min==fit$lambda.1se){
-        ##     lambda <- rev(seq(fit$lambda.min/2, fit$lambda.1se, length.out = 30))
-        ## }else{
-        ##     lambda <- rev(seq(fit$lambda.min, fit$lambda.1se, length.out = 30))
-        ## }
+        lambda <- rev(exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se*20), length.out = 100)))
+
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
                          penalty.factor=penalty, alpha=alpha)
-        coefs <- coef(fit, s=ifelse(lambda.choice==1, 'lambda.1se', 'lambda.min'))[-1]
-        ##coefs <- coef(fit, s= (fit$lambda.min + fit$lambda.1se)/2  )[-1]
-        ##plot(fit)
+        if(lambda.choice == 1){
+            s = 'lambda.1se'
+        }else if(lambda.choice == 2){
+            s = 'lambda.min'
+        }else{
+            s = (fit$lambda.min + fit$lambda.1se)/2
+        }
+        coefs <- coef(fit, s=s)[-1]
+
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
         return(c(coefs, e2))
     }
