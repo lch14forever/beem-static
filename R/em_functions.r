@@ -315,7 +315,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30, warm.iter=
 
         if(remove_non_eq){
             ## clear up removed samples every X iterations
-            if (iter %% 5 == 0 ) {
+            if (iter %% 3 == 0 ) {
                 sample.filter.iter <- dat.init$sample.filter
             }
             bad.samples <- detectBadSamples(apply(err.p, 2, median, na.rm = TRUE), dev)
