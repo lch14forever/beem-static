@@ -5,7 +5,8 @@
 \title{func.EM}
 \usage{
 func.EM(dat, ncpu = 4, scaling = 10000, dev = Inf, max.iter = 30,
-  warm.iter = NULL, lambda.choice = 1, alpha = 1, debug = FALSE)
+  warm.iter = NULL, lambda.choice = 1, alpha = 1, debug = FALSE,
+  refresh.iter = 3)
 }
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
@@ -25,6 +26,8 @@ func.EM(dat, ncpu = 4, scaling = 10000, dev = Inf, max.iter = 30,
 \item{alpha}{The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)}
 
 \item{debug}{output debugging information (default FALSE)}
+
+\item{refresh.iter}{refresh the removed samples every X iterations (default: 3)}
 }
 \description{
 Iteratively estimating scaled parameters and biomass
