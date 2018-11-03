@@ -71,13 +71,14 @@ diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
 ##' @param beem.out output of a beem run
 ##' @param dat input data for the beem run
 ##' @param layout graph layout (see the documentation for ggraph)
+##' @param node.text.size node text size
 ##' @import igraph
 ##' @import ggraph
 ##' @description plot the interaction network inferred by beem (using ggraph)
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
-showInteraction <- function(beem.out, dat, layout='fr'){
-    b <- t(beem2param(beem.out)$b) ## need transpose
+showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2){
+    b <- t(beem2param(beem.out)$b.est) ## need transpose
     diag(b) <- 0
     g <- graph.adjacency(b, mode='directed', weighted='I')
     V(g)$label <- rownames(dat)
@@ -90,9 +91,26 @@ showInteraction <- function(beem.out, dat, layout='fr'){
                       curvature = 0.1, alpha=0.8,
                       end_cap=circle(1.5, 'mm'), start_cap=circle(1.5, 'mm')) +
         geom_node_point(pch=1, aes(size=RelativeAbundance)) +
-        geom_node_text(aes(label = label), size=2, repel = TRUE) +
+        geom_node_text(aes(label = label), size=node.text.size, repel = TRUE) +
         scale_edge_width(range = c(0.5,1.5), guide=FALSE) +
         theme_void()
+}
+
+##' @title showGrowth
+##'
+##' @param beem.out output of a beem run
+##' @param dat input data for the beem run
+##' @description ordered barplot for growth rates
+##' @import ggplot2
+##' @author Chenhao Li, Niranjan Nagarajan
+##' @export
+showGrowth <- function(beem.out, dat){
+    a <- beem2param(beem.out)$a.est
+    ggplot(data.frame(Name=rownames(dat), Growth=a),
+           aes(x=reorder(Name, Growth, function(x) x), y=Growth)) +
+        geom_bar(stat='identity') +
+        labs(x=NULL) + theme_bw() +
+        coord_flip()
 }
 
 ##' @title pcoa

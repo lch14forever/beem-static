@@ -4,7 +4,7 @@
 \alias{showInteraction}
 \title{showInteraction}
 \usage{
-showInteraction(beem.out, dat, layout = "fr")
+showInteraction(beem.out, dat, layout = "fr", node.text.size = 2)
 }
 \arguments{
 \item{beem.out}{output of a beem run}
@@ -12,6 +12,8 @@ showInteraction(beem.out, dat, layout = "fr")
 \item{dat}{input data for the beem run}
 
 \item{layout}{graph layout (see the documentation for ggraph)}
+
+\item{node.text.size}{node text size}
 }
 \description{
 plot the interaction network inferred by beem (using ggraph)
