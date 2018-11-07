@@ -73,11 +73,15 @@ diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
 ##' @param layout graph layout (see the documentation for ggraph)
 ##' @param node.text.size node text size
 ##' @import igraph
-##' @import ggraph
 ##' @description plot the interaction network inferred by beem (using ggraph)
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
 showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2){
+    if (!requireNamespace("ggraph", quietly = TRUE)) {
+        stop("Package \"ggraph\" needed for this function to work. Please install it.",
+             call. = FALSE)
+    }
+    require(ggraph)
     b <- t(beem2param(beem.out)$b.est) ## need transpose
     diag(b) <- 0
     g <- graph.adjacency(b, mode='directed', weighted='I')
