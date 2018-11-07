@@ -21,7 +21,7 @@ func.EM(dat, ncpu = 4, scaling = 10000, dev = Inf, max.iter = 30,
 
 \item{warm.iter}{number of iterations to run before removing any samples (default: run until convergence and start to remove samples)}
 
-\item{lambda.choice}{1: use lambda.1se for LASSO, 2: use lambda.min for LASSO}
+\item{lambda.choice}{1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se}
 
 \item{alpha}{The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)}
 

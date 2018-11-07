@@ -4,7 +4,7 @@ Version: 0.0.0.9000
 Author: Chenhao Li, Niranjan Nagarajan
 Maintainer: Chenhao Li <lich@gis.a-star.edu.sg>
 Description: What the package does (one paragraph).
-Depends: R (>= 3.4.2)
+Depends: R (>= 3.4.0)
 Imports:
     foreach,
     doMC,

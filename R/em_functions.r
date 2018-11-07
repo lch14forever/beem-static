@@ -60,7 +60,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         }else if(lambda.choice == 2){
             s = 'lambda.min'
         }else{
-            s = (fit$lambda.min + fit$lambda.1se)/2
+            s = (1-lambda.choice)*fit$lambda.min + lambda.choice*fit$lambda.1se
         }
         coefs <- coef(fit, s=s)[-1]
 
@@ -259,7 +259,7 @@ beem2biomass <- function(beem){
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
 ##' @param max.iter maximal number of iterations (default 30)
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
-##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO
+##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
 ##' @param alpha The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @param refresh.iter refresh the removed samples every X iterations (default: 3)
 ##' @param debug output debugging information (default FALSE)
