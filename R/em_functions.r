@@ -48,7 +48,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         penalty <- c(0,rep(1, ncol(X)-1))
         maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
-        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init,
+        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfolds=5,
                          penalty.factor=penalty, alpha=alpha)
 
         lambda <- rev(exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se*20), length.out = 100)))

@@ -43,7 +43,7 @@ diagnoseFit(res, dat.w.noise, annotate = FALSE)
 
 diagnoseBiomass(res, true.biomass = biomass.true)
 
-plot(res$trace.m[,30], biomass.true, xlab='BEEM biomass estimation', ylab='True biomass')
+plot(beem2biomass(res), biomass.true, xlab='BEEM biomass estimation', ylab='True biomass')
 
 est <- beem2param(res)
 
@@ -68,4 +68,8 @@ auc.b(spearman, scaled.params$b.truth, is.association = TRUE, main='Spearman cor
 auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPIEC-EASI')
 auc.b(est$b.est, scaled.params$b.truth, main='BEEM-static')
 
-
+par(mfrow=c(1,2), cex=1)
+tmp <- scaled.params$b.truth
+tmp[tmp!=0 & res$b.uncertain<0.5] <- 0
+auc.b(est$b.est, scaled.params$b.truth, main='BEEM-static')
+auc.b(est$b.est, tmp, main='BEEM-static (excluding uncertain edges)')
