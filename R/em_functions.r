@@ -105,9 +105,17 @@ norm <- function(a, b, x){
     c(m, err)
 }
 
+##' @title entropy
+##'
+##' @param v a vector input (treated as binary, i.e. zero/non-zero)
+##' @description Compute the entropy of a binary vector
+##' @author Chenhao Li, Niranjan Nagarajan
+entropy <- function(v){
+    p <- sum(v == 0)/length(v)
+    ifelse(p==0 || p==1, 0, -(p*log2(p) + (1-p)*log2(1-p)) )
+}
 
 ##' @title func.E
-##'
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
 ##' @param sample.filter filter out samples contain outliers in Y
 ##' @param m estimated biomass values
@@ -138,7 +146,15 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         e2[fil] <- tmp[-(1:p)]
         c(theta, e2)
     }
-    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,-(1:(p+1))])
+    ## check if there is not enough information
+    uncertain <- foreach(i=1:p, .combine=rbind) %dopar% {
+        fil <- dat.tss[i,]!=0 & !sample.filter[i,]
+        X <- dat.tss[, fil]
+        apply(X, 1, entropy)
+        ## abs(rowSums(X!=0)/ncol(X) - 0.5) ## non-zero entries
+    }
+
+    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,-(1:(p+1))], uncertain=uncertain)
 }
 
 
@@ -305,6 +321,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
         ## TODO: is a switch from lasso to elastic net needed?
         tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice, alpha=alpha)
         err.p <- tmp.p$e2
+        uncertain <- tmp.p$uncertain
         if(debug){
             print(rowSums(tmp.p$b!=0))
             plot(1-rowSums(err.p, na.rm = TRUE)/apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2)))
@@ -344,7 +361,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
             break
         }
     }
-    list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
+    list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p, b.uncertain = uncertain,
          sample2rm = which(colSums(sample.filter.iter) > 0))
 }
 
