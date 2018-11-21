@@ -11,6 +11,9 @@ detectBadSamples(err, threshold)
 
 \item{threshold}{threshold to filter out samples}
 }
+\description{
+detectBadSamples
+}
 \author{
 Chenhao Li, Niranjan Nagarajan
 }

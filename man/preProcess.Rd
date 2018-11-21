@@ -4,12 +4,12 @@
 \alias{preProcess}
 \title{preProcess}
 \usage{
-preProcess(dat, dev = 1)
+preProcess(dat, dev = 0)
 }
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
 
-\item{dev}{dev * IQR from median will be filtered out (default: Inf, nothing to remove)}
+\item{dev}{dev * IQR from median will be filtered out (default: 0, nothing to remove)}
 
 \item{ncpu}{number of CPUs (default: 4)}
 }

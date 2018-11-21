@@ -42,9 +42,9 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
 diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
     dat.tss <- tss(dat)
     r_ss <- rowSums(beem.out$err.p, na.rm=TRUE)
-    ## if(length(beem.out$sample2rm) > 0 ) {
-    ##     dat.tss <- dat.tss[, -beem.out$sample2rm]
-    ## }
+    # if(length(beem.out$sample2rm) > 0 ) {
+    #     dat.tss <- dat.tss[, -beem.out$sample2rm]
+    # }
     t_ss <- apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2))
     r2 <- 1-r_ss/t_ss
     if(is.null(rownames(dat.tss))){
@@ -132,8 +132,8 @@ pcoa <- function(countData, col='Color'){
     dat <- data.frame(dat.pcoa$points, col=col)
     ggplot(dat, aes(x=X1, y=X2, col=col)) +
         geom_point(size=2) +
-        labs(x=paste0('CMD1 (' ,round(per.var[1], 2),'%)'),
-             y=paste0('CMD2 (',round(per.var[2], 2),'%)'))
+        labs(x=paste0('MDS1 (', round(per.var[1], 2),'%)'),
+             y=paste0('MDS2 (', round(per.var[2], 2),'%)'))
 }
 
 

@@ -35,10 +35,11 @@ css <- function(m, p=0.5){
 ##' @param seed seed
 ##' @param alpha the alpha parameter for elastic net (1:lasso [default], 0:ridge)
 ##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis, 3: mixed
+##' @param nfold number of folds for glmnet cross-validation
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Niranjan Nagarajan
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.choice=1){
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.choice=1, nfold=10){
     set.seed(seed)
     if(method=='lm'){
         return(as.numeric(coef(lm(Y~X+0))))
@@ -48,22 +49,22 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         penalty <- c(0,rep(1, ncol(X)-1))
         maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
-        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfolds=5,
+        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfold=nfold,
                          penalty.factor=penalty, alpha=alpha)
 
-        lambda <- rev(exp(seq(log(fit$lambda.1se/20), log(fit$lambda.1se*20), length.out = 100)))
+        lambda <- rev(exp(seq(log(fit$lambda.min/20), log(fit$lambda.min*20), length.out = 100)))
 
-        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,
+        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfold=nfold,
                          penalty.factor=penalty, alpha=alpha)
         if(lambda.choice == 1){
-            s = 'lambda.1se'
+            s = fit$lambda.1se
         }else if(lambda.choice == 2){
-            s = 'lambda.min'
+            s = fit$lambda.min
         }else{
             s = (1-lambda.choice)*fit$lambda.min + lambda.choice*fit$lambda.1se
         }
-        coefs <- coef(fit, s=s)[-1]
 
+        coefs <- coef(fit, s=s)[-1]
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
         return(c(coefs, e2))
     }
@@ -143,7 +144,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         tmp <- infer(Y,X,...)
         theta[-(i+1)] <- tmp[1:p]
         e2 <- rep(NA, ncol(dat.tss))
-        e2[fil] <- tmp[-(1:p)]
+        e2[fil] <- tmp[(p+1):(length(tmp))]
         c(theta, e2)
     }
     ## check if there is not enough information
@@ -154,7 +155,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         ## abs(rowSums(X!=0)/ncol(X) - 0.5) ## non-zero entries
     }
 
-    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,-(1:(p+1))], uncertain=uncertain)
+    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,(p+2):(ncol(res))], uncertain=uncertain)
 }
 
 
@@ -179,11 +180,11 @@ func.M <- function(dat.tss, a, b, ncpu=4,...){
 ##' @title preProcess
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
-##' @param dev dev * IQR from median will be filtered out (default: Inf, nothing to remove)
+##' @param dev dev * IQR from median will be filtered out (default: 0, nothing to remove)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @description pre-process data
 ##' @author Chenhao Li, Niranjan Nagarajan
-preProcess <- function(dat, dev=1){
+preProcess <- function(dat, dev=0){
     ## filter out species abundances that are too low
     detection_limit <- 1e-4
     dat <- tss(dat)
@@ -234,7 +235,7 @@ formatOutput <- function(a, b, vnames){
 ##' @param threshold threshold to filter out samples
 ##' @author Chenhao Li, Niranjan Nagarajan
 detectBadSamples <- function(err, threshold){
-    score <- abs(err - median(err, na.rm = TRUE))/IQR(err, na.rm = TRUE)
+    score <- (err - median(err, na.rm = TRUE))/IQR(err, na.rm = TRUE)
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
@@ -300,7 +301,6 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
     sample.filter.iter <- dat.init$sample.filter
     tmp <- css(t(dat.tss))$normFactors
     m.iter <- scaling * tmp/median(tmp)
-    ## m.iter <- rnorm(length(m.iter), scaling, scaling/10) ## start with random biomass
     trace.m <- matrix(m.iter)
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
@@ -324,8 +324,13 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
         uncertain <- tmp.p$uncertain
         if(debug){
             print(rowSums(tmp.p$b!=0))
-            plot(1-rowSums(err.p, na.rm = TRUE)/apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2)))
-            abline(h=0.5)
+            # par(mfrow=c(6,6),mar=c(1,1,1,1))
+            # for(i in 1:nrow(dat.tss)){
+            #     plot(as.numeric(err.p[i,])~as.numeric(dat.tss[i,]))
+            # }
+            ##par(mfrow=c(1,2))
+            plot(1-rowMeans(err.p, na.rm = TRUE)/apply(dat.tss[,], 1, function(x) var(x[x!=0], na.rm=TRUE) ))
+            ##abline(h=0.5)
         }
         message("M-step: estimating biomass...")
         tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, ncpu)
