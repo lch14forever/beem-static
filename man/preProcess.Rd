@@ -10,8 +10,6 @@ preProcess(dat, dev = 0)
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
 
 \item{dev}{dev * IQR from median will be filtered out (default: 0, nothing to remove)}
-
-\item{ncpu}{number of CPUs (default: 4)}
 }
 \description{
 pre-process data

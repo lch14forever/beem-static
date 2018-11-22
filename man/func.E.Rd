@@ -4,7 +4,8 @@
 \alias{func.E}
 \title{func.E}
 \usage{
-func.E(dat.tss, m, sample.filter, ncpu = 4, center = FALSE, ...)
+func.E(dat.tss, m, sample.filter, lambda.inits = NULL, ncpu = 4,
+  center = FALSE, ...)
 }
 \arguments{
 \item{dat.tss}{relative abundances matrix (each OTU in one row)}
@@ -12,6 +13,8 @@ func.E(dat.tss, m, sample.filter, ncpu = 4, center = FALSE, ...)
 \item{m}{estimated biomass values}
 
 \item{sample.filter}{filter out samples contain outliers in Y}
+
+\item{lambda.inits}{initial lambda values}
 
 \item{ncpu}{number of CPUs (default: 4)}
 

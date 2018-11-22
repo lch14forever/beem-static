@@ -12,18 +12,10 @@ norm(a, b, x)
 \item{b}{estimated interaction matrix (scaled by self-interaction)}
 
 \item{x}{abundances in one sample}
-
-\item{Y}{response}
-
-\item{X}{predictors}
 }
 \description{
 estimate biomass with linear regression
-
-estimate biomass with linear regression
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
-
 Chenhao Li, Niranjan Nagarajan
 }

@@ -34,25 +34,30 @@ css <- function(m, p=0.5){
 ##' @param intercept whether to include the intercept
 ##' @param seed seed
 ##' @param alpha the alpha parameter for elastic net (1:lasso [default], 0:ridge)
-##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis, 3: mixed
-##' @param nfold number of folds for glmnet cross-validation
+##' @param lambda.init user provides initial lambda values
+##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis, number between (0,1): mixed
+##' @param nfolds number of folds for glmnet cross-validation
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Niranjan Nagarajan
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.choice=1, nfold=10){
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.init=NULL, lambda.choice=1, nfolds=10){
     set.seed(seed)
     if(method=='lm'){
         return(as.numeric(coef(lm(Y~X+0))))
     }
     if(method=='glmnet'){
-        lambda.init <- rev(10^(seq(-9,-1, length.out = 20)))
         penalty <- c(0,rep(1, ncol(X)-1))
         maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
-        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfold=nfold,
+        if(is.null(lambda.init)){
+            lambda.init <- rev(10^(seq(-9,-1, length.out = 20)))
+            fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfolds=nfolds,
                          penalty.factor=penalty, alpha=alpha)
 
-        lambda <- rev(exp(seq(log(fit$lambda.min/20), log(fit$lambda.min*20), length.out = 100)))
+            lambda <- rev(exp(seq(log(fit$lambda.min/20), log(fit$lambda.min*20), length.out = 100)))
+        }else{
+            lambda <- rev(exp(seq(log(lambda.init/20), log(lambda.init), length.out = 100)))
+        }
 
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfold=nfold,
                          penalty.factor=penalty, alpha=alpha)
@@ -66,16 +71,16 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
 
         coefs <- coef(fit, s=s)[-1]
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
-        return(c(coefs, e2))
+        return(c(coefs, e2, s))
     }
 }
 
-##' @title norm
-##'
-##' @param Y response
-##' @param X predictors
-##' @description estimate biomass with linear regression
-##' @author Chenhao Li, Niranjan Nagarajan
+## ##' @title norm
+## ##'
+## ##' @param Y response
+## ##' @param X predictors
+## ##' @description estimate biomass with linear regression
+## ##' @author Chenhao Li, Niranjan Nagarajan
 ## norm <- function(Y, X){
 ##     wrong.sign <- sign(X) != sign(Y)
 ##     outliers <- abs(Y - median(Y)) > 2 * IQR(Y) | abs(X - median(X)) > 2 * IQR(X) | wrong.sign
@@ -119,6 +124,7 @@ entropy <- function(v){
 ##' @title func.E
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
 ##' @param sample.filter filter out samples contain outliers in Y
+##' @param lambda.inits initial lambda values
 ##' @param m estimated biomass values
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param center center data or not
@@ -126,7 +132,7 @@ entropy <- function(v){
 ##' @import foreach
 ##' @description E-part of BEEM, estimate model parameters with inferred m
 ##' @author Chenhao Li, Niranjan Nagarajan
-func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
+func.E <- function(dat.tss, m, sample.filter, lambda.inits=NULL, ncpu=4, center=FALSE, ...){
     ## infer parameter for each OTU
     registerDoMC(ncpu)
     p <- nrow(dat.tss)
@@ -141,11 +147,12 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         }
         theta <- rep(0, p+1)
         theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
-        tmp <- infer(Y,X,...)
+        tmp <- infer(Y,X, lambda.init=lambda.inits[i], ...)
         theta[-(i+1)] <- tmp[1:p]
         e2 <- rep(NA, ncol(dat.tss))
-        e2[fil] <- tmp[(p+1):(length(tmp))]
-        c(theta, e2)
+        e2[fil] <- tmp[(p+1):(length(tmp)-1)]
+        lambda <- tmp[length(tmp)]
+        c(theta, e2, lambda)
     }
     ## check if there is not enough information
     uncertain <- foreach(i=1:p, .combine=rbind) %dopar% {
@@ -155,7 +162,7 @@ func.E <- function(dat.tss, m, sample.filter, ncpu=4, center=FALSE, ...){
         ## abs(rowSums(X!=0)/ncol(X) - 0.5) ## non-zero entries
     }
 
-    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,(p+2):(ncol(res))], uncertain=uncertain)
+    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,(p+2):(ncol(res)-1)], uncertain=uncertain, lambdas=res[,ncol(res)])
 }
 
 
@@ -181,7 +188,6 @@ func.M <- function(dat.tss, a, b, ncpu=4,...){
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param dev dev * IQR from median will be filtered out (default: 0, nothing to remove)
-##' @param ncpu number of CPUs (default: 4)
 ##' @description pre-process data
 ##' @author Chenhao Li, Niranjan Nagarajan
 preProcess <- function(dat, dev=0){
@@ -210,13 +216,13 @@ postProcess <- function(b, dev=1e-5){
 
 
 ##' @title formatOutput
+##' @importFrom reshape2 melt
 ##' @param a scaled growth rates
 ##' @param b scaled interaction matrix
 ##' @param vnames variable names
 ##' @description Function to convert parameter vector a and matrix b to MDSINE's output format
 ##' @author Chenhao Li, Niranjan Nagarajan
 formatOutput <- function(a, b, vnames){
-    suppressMessages(require(reshape2))
     p <- length(a)
     param <- data.frame(parameter_type=c(rep("growth_rate",p), rep("interaction",p*p)))
     param$source_taxon <- c(rep(NA,p),rep(vnames, each = p))
@@ -305,7 +311,8 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
     trace.p <- data.frame(name=trace.p)
-
+    trace.lambda <- data.frame(spNames)
+    lambda.inits <- NULL
     ## flags
     remove_non_eq <- FALSE
     removeIter <- 0
@@ -318,9 +325,12 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
         message("E-step: estimating scaled parameters...")
         ##if(iter==1) method <- 'lm'
         if(iter>=1) method <- 'glmnet'
-        ## TODO: is a switch from lasso to elastic net needed?
-        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method, lambda.choice=lambda.choice, alpha=alpha)
+        if(iter>=5) lambda.inits <- lambdas
+        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method,
+                        lambda.inits=lambda.inits ,
+                        lambda.choice=lambda.choice, alpha=alpha)
         err.p <- tmp.p$e2
+        lambdas <- tmp.p$lambdas
         uncertain <- tmp.p$uncertain
         if(debug){
             print(rowSums(tmp.p$b!=0))
@@ -352,6 +362,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
         m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0], na.rm=TRUE)
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
+        trace.lambda <- cbind(trace.lambda, lambdas)
         criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3
         if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
             message("Start to detect and remove bad samples...")
@@ -366,7 +377,8 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
             break
         }
     }
-    list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p, b.uncertain = uncertain,
+    list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
+         b.uncertain = uncertain, trace.lambda=trace.lambda,
          sample2rm = which(colSums(sample.filter.iter) > 0))
 }
 

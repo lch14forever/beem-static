@@ -66,21 +66,31 @@ diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
     p
 }
 
+##' @title checkPackage
+##'
+##' @param x package to check
+##' @description Check if a package is available
+##' @author Chenhao Li, Niranjan Nagarajan
+checkPackage <- function(x){
+    if (!requireNamespace(x, quietly = TRUE)) {
+        stop(paste0("Package \"", x, "\" needed for this function to work. Please install it."),
+             call. = FALSE)
+    }
+}
+
 ##' @title showInteraction
 ##'
 ##' @param beem.out output of a beem run
 ##' @param dat input data for the beem run
 ##' @param layout graph layout (see the documentation for ggraph)
 ##' @param node.text.size node text size
-##' @import igraph
 ##' @description plot the interaction network inferred by beem (using ggraph)
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
 showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2){
-    if (!requireNamespace("ggraph", quietly = TRUE)) {
-        stop("Package \"ggraph\" needed for this function to work. Please install it.",
-             call. = FALSE)
-    }
+    checkPackage("ggraph")
+    checkPackage("igraph")
+    require(igraph)
     require(ggraph)
     b <- t(beem2param(beem.out)$b.est) ## need transpose
     diag(b) <- 0
@@ -158,10 +168,7 @@ cluster <- function(countData){
 ##' @description plot ROC curve with AUC for the interaction graph (interaction signs are ignored)
 ##' @export
 auc.b <- function(b.est, b.true, is.association=FALSE, ...){
-    if (!requireNamespace("pROC", quietly = TRUE)) {
-        stop("Package \"pROC\" needed for this function to work. Please install it.",
-             call. = FALSE)
-    }
+    checkPackage("pROC")
     diag(b.est) <- NA
     diag(b.true) <- NA
     if(is.association){

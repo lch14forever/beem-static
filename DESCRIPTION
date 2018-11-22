@@ -8,10 +8,12 @@ Depends: R (>= 3.4.0)
 Imports:
     foreach,
     doMC,
-    glmnet
-Suggests:
     ggplot2,
     ggrepel,
+    glmnet,
+    vegan,
+    reshape2,
+Suggests:
     igraph,
     ggraph,
     pROC

@@ -5,7 +5,7 @@
 \title{infer}
 \usage{
 infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
-  alpha = 1, lambda.choice = 1, nfold = 10)
+  alpha = 1, lambda.init = NULL, lambda.choice = 1, nfolds = 10)
 }
 \arguments{
 \item{Y}{response}
@@ -20,9 +20,11 @@ infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
 
 \item{alpha}{the alpha parameter for elastic net (1:lasso [default], 0:ridge)}
 
-\item{lambda.choice}{1: use lambda.1se for analysis, 2: use lambda.min for analysis, 3: mixed}
+\item{lambda.init}{user provides initial lambda values}
 
-\item{nfold}{number of folds for glmnet cross-validation}
+\item{lambda.choice}{1: use lambda.1se for analysis, 2: use lambda.min for analysis, number between (0,1): mixed}
+
+\item{nfolds}{number of folds for glmnet cross-validation}
 }
 \description{
 Infer parameters with blasso
