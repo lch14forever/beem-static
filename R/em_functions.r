@@ -59,7 +59,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
             lambda <- rev(exp(seq(log(lambda.init/20), log(lambda.init), length.out = 100)))
         }
 
-        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfold=nfold,
+        fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
                          penalty.factor=penalty, alpha=alpha)
         if(lambda.choice == 1){
             s = fit$lambda.1se
