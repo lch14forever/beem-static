@@ -42,9 +42,9 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
 diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
     dat.tss <- tss(dat)
     r_ss <- rowSums(beem.out$err.p, na.rm=TRUE)
-    # if(length(beem.out$sample2rm) > 0 ) {
-    #     dat.tss <- dat.tss[, -beem.out$sample2rm]
-    # }
+    if(length(beem.out$sample2rm) > 0 ) {
+        dat.tss <- dat.tss[, -beem.out$sample2rm]
+    }
     t_ss <- apply(dat.tss, 1, function(x) sum((x[x!=0]-mean(x[x!=0]))^2))
     r2 <- 1-r_ss/t_ss
     if(is.null(rownames(dat.tss))){
@@ -90,8 +90,8 @@ checkPackage <- function(x){
 showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2){
     checkPackage("ggraph")
     checkPackage("igraph")
-    require(igraph)
-    require(ggraph)
+    suppressMessages(require(igraph))
+    suppressMessages(require(ggraph))
     b <- t(beem2param(beem.out)$b.est) ## need transpose
     diag(b) <- 0
     g <- graph.adjacency(b, mode='directed', weighted='I')

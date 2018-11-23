@@ -56,7 +56,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
 
             lambda <- rev(exp(seq(log(fit$lambda.min/20), log(fit$lambda.min*20), length.out = 100)))
         }else{
-            lambda <- rev(exp(seq(log(lambda.init/20), log(lambda.init), length.out = 100)))
+            lambda <- rev(exp(seq(log(lambda.init/5), log(lambda.init), length.out = 50)))
         }
 
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
@@ -323,10 +323,8 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
     for(iter in 1:max.iter){
         message(paste0("############# Run for iteration ", iter,": #############"))
         message("E-step: estimating scaled parameters...")
-        ##if(iter==1) method <- 'lm'
-        if(iter>=1) method <- 'glmnet'
         if(iter>=5) lambda.inits <- lambdas
-        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method=method,
+        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method='glmnet',
                         lambda.inits=lambda.inits ,
                         lambda.choice=lambda.choice, alpha=alpha)
         err.p <- tmp.p$e2
