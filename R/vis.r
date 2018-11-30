@@ -84,16 +84,23 @@ checkPackage <- function(x){
 ##' @param dat input data for the beem run
 ##' @param layout graph layout (see the documentation for ggraph)
 ##' @param node.text.size node text size
+##' @param t.strength the threshold used to limit the number of interactions (strength)
+##' @param t.stab the threshold used to limit the number of interactions (stability)
 ##' @description plot the interaction network inferred by beem (using ggraph)
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
-showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2){
+showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2, t.strength=0.001, t.stab=0.8){
     checkPackage("ggraph")
     checkPackage("igraph")
     suppressMessages(require(igraph))
     suppressMessages(require(ggraph))
     b <- t(beem2param(beem.out)$b.est) ## need transpose
     diag(b) <- 0
+    if(!is.null(beem.out$resample)){
+        b[t(beem.out$resample$b.stab<t.stab)] <- 0
+    }
+    b[abs(b)<t.strength] <- 0
+
     g <- graph.adjacency(b, mode='directed', weighted='I')
     V(g)$label <- rownames(dat)
     V(g)$RelativeAbundance <- rowMeans(tss(dat))

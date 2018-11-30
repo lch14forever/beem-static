@@ -4,7 +4,8 @@
 \alias{showInteraction}
 \title{showInteraction}
 \usage{
-showInteraction(beem.out, dat, layout = "fr", node.text.size = 2)
+showInteraction(beem.out, dat, layout = "fr", node.text.size = 2,
+  t.strength = 0.001, t.stab = 0.8)
 }
 \arguments{
 \item{beem.out}{output of a beem run}
@@ -14,6 +15,10 @@ showInteraction(beem.out, dat, layout = "fr", node.text.size = 2)
 \item{layout}{graph layout (see the documentation for ggraph)}
 
 \item{node.text.size}{node text size}
+
+\item{t.strength}{the threshold used to limit the number of interactions (strength)}
+
+\item{t.stab}{the threshold used to limit the number of interactions (stability)}
 }
 \description{
 plot the interaction network inferred by beem (using ggraph)

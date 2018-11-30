@@ -35,12 +35,12 @@ css <- function(m, p=0.5){
 ##' @param seed seed
 ##' @param alpha the alpha parameter for elastic net (1:lasso [default], 0:ridge)
 ##' @param lambda.init user provides initial lambda values
-##' @param lambda.choice 1: use lambda.1se for analysis, 2: use lambda.min for analysis, number between (0,1): mixed
+##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
 ##' @param nfolds number of folds for glmnet cross-validation
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Niranjan Nagarajan
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.init=NULL, lambda.choice=1, nfolds=10){
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.init=NULL, lambda.choice=1, nfolds=5){
     set.seed(seed)
     if(method=='lm'){
         return(as.numeric(coef(lm(Y~X+0))))
@@ -50,14 +50,33 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         maxmin <- median(Y) + 5 * IQR(Y) %*% c(1,-1)
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
         if(is.null(lambda.init)){
+            ## select a lambda range first
             lambda.init <- rev(10^(seq(-9,-1, length.out = 20)))
             fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfolds=nfolds,
                          penalty.factor=penalty, alpha=alpha)
-
-            lambda <- rev(exp(seq(log(fit$lambda.min/20), log(fit$lambda.min*20), length.out = 100)))
+            lambda <- rev(exp(seq(log(fit$lambda.min/10), log(fit$lambda.min*10), length.out = 50)))
         }else{
-            lambda <- rev(exp(seq(log(lambda.init/5), log(lambda.init), length.out = 50)))
+            lambda <- rev(exp(seq(log(lambda.init/2), log(lambda.init), length.out = 10)))
         }
+
+        # ## Iteratively fit models
+        # lambdas <- NULL #initialize
+        # for (i in 1:5) {
+        #     fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
+        #                      penalty.factor=penalty, alpha=alpha)
+        #     if(lambda.choice == 1){
+        #         s = fit$lambda.1se
+        #     }else if(lambda.choice == 2){
+        #         s = fit$lambda.min
+        #     }else{
+        #         s = (1-lambda.choice)*fit$lambda.min + lambda.choice*fit$lambda.1se
+        #     }
+        #
+        #     df <- data.frame(s, median(fit$cvm) ) #can use median for CVM also
+        #     lambdas <- rbind(lambdas, df)
+        # }
+        # ## Select best lambda:
+        # s <- median(lambdas[, 1])
 
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
                          penalty.factor=penalty, alpha=alpha)
@@ -68,28 +87,102 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         }else{
             s = (1-lambda.choice)*fit$lambda.min + lambda.choice*fit$lambda.1se
         }
-
         coefs <- coef(fit, s=s)[-1]
         e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
+        rm(.Random.seed, envir=.GlobalEnv)
         return(c(coefs, e2, s))
     }
 }
 
-## ##' @title norm
-## ##'
-## ##' @param Y response
-## ##' @param X predictors
-## ##' @description estimate biomass with linear regression
-## ##' @author Chenhao Li, Niranjan Nagarajan
-## norm <- function(Y, X){
-##     wrong.sign <- sign(X) != sign(Y)
-##     outliers <- abs(Y - median(Y)) > 2 * IQR(Y) | abs(X - median(X)) > 2 * IQR(X) | wrong.sign
-##     if(all(outliers)) outliers <- wrong.sign
-##     if(all(outliers)) return(median(abs(Y/X)))
-##     model <- lm(Y[!outliers]~X[!outliers]-1)
-##     abs(model$coeff[1])
-##     ##median(Y/X)
-## }
+# ##' @title boot_stat
+# ##'
+# ##' @param data data in the format of cbind(Y, X)
+# ##' @param indices indices for bootstrapping
+# ##' @description bootstrapping the inference process
+# ##' @author Chenhao Li, Niranjan Nagarajan
+# bs <- function(data, indices) {
+#     X_s <- data[indices, -1] # allows boot to select sample
+#     Y_s <- data[indices, 1]
+#     fit <- infer(Y_s, X_s)
+#     return(fit[1:ncol(X_s)])
+# }
+# ##' @title func.E.boot
+# ##'
+# ##' @param dat.tss relative abundances matrix (each OTU in one row)
+# ##' @param sample.filter filter out samples contain outliers in Y
+# ##' @param m estimated biomass values
+# ##' @param ncpu number of CPUs (default: 4)
+# ##' @importFrom boot boot
+# ##' @importFrom doMC registerDoMC
+# ##' @import foreach
+# ##' @description bootstrapped E-step
+# ##' @author Chenhao Li, Niranjan Nagarajan
+# func.E.boot <- function(dat.tss, m, sample.filter, ncpu=4, ...){
+#     registerDoMC(ncpu)
+#     p <- nrow(dat.tss)
+#     res <- foreach(i=1:p, .combine=rbind) %do% {
+#         message(paste0("Bootstrapping for species ", i))
+#         fil <- dat.tss[i,]!=0 & !sample.filter[i,]
+#         X <- t(rbind(1/m, dat.tss[-i,])[,fil])
+#         Y <- dat.tss[i, fil]
+#         theta <- rep(0, p+1)
+#         stab <- rep(1, p)
+#         theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
+#         tmp <- boot(data=cbind(Y,X), statistic=bs, R=100)
+#         theta[-(i+1)] <- apply(tmp$t, 2, median)
+#         stab[-(i)] <- (colSums(tmp$t!=0)/tmp$R)[-1]
+#         c(theta, stab)
+#     }
+#     list(a=res[,1], b=postProcess(res[,1:p+1]), stab=res[,(p+2):ncol(res)])
+# }
+
+##' @title func.E.stab
+##'
+##' @param dat.tss relative abundances matrix (each OTU in one row)
+##' @param sample.filter filter out samples contain outliers in Y
+##' @param m estimated biomass values
+##' @param ncpu number of CPUs (default: 4)
+##' @param perc percentage of samples to take for each iteration
+##' @param niter number of iterations to run
+##' @param ... additional parameters for beemStatic:::infer
+##' @importFrom doMC registerDoMC
+##' @import foreach
+##' @description E-step with subsampling to estimate stability
+##' @author Chenhao Li, Niranjan Nagarajan
+func.E.stab <- function(dat.tss, m, sample.filter, ncpu=4, perc=0.6, niter=100, ...){
+    registerDoMC(ncpu)
+    p <- nrow(dat.tss)
+    res <- foreach(i=1:p, .combine=rbind) %do% {
+        message(paste0("Resampling for species ", i))
+        fil <- dat.tss[i,]!=0 & !sample.filter[i,]
+        X <- t(rbind(1/m, dat.tss[-i,])[,fil])
+        Y <- dat.tss[i, fil]
+        theta <- rep(0, p+1)
+        stab <- rep(1, p)
+        theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
+        tmp <- (sapply(1:niter, function(x) sub_stat(data=cbind(Y,X), perc) ))
+        theta[-(i+1)] <- apply(tmp, 1, median)
+        stab[-(i)] <- (rowSums(tmp!=0)/niter)[-1]
+        c(theta, stab)
+    }
+    list(a=res[,1], b=postProcess(res[,1:p+1]), stab=res[,(p+2):ncol(res)])
+}
+
+##' @title sub_stat
+##'
+##' @param data data in the format of cbind(Y, X)
+##' @param perc percentage of samples to take for each iteration
+##' @param ... additional parameters for beemStatic:::infer
+##' @description Resampling for the inference process
+##' @author Chenhao Li, Niranjan Nagarajan
+sub_stat <- function(data, perc, ...) {
+    n <- nrow(data)
+    indices <- sample(1:n, n*perc)
+    X_s <- data[indices, -1]
+    Y_s <- data[indices, 1]
+    fit <- infer(Y_s, X_s)
+    return(fit[1:ncol(X_s)])
+}
 
 ##' @title norm
 ##'
@@ -122,6 +215,7 @@ entropy <- function(v){
 }
 
 ##' @title func.E
+##'
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
 ##' @param sample.filter filter out samples contain outliers in Y
 ##' @param lambda.inits initial lambda values
@@ -162,7 +256,8 @@ func.E <- function(dat.tss, m, sample.filter, lambda.inits=NULL, ncpu=4, center=
         ## abs(rowSums(X!=0)/ncol(X) - 0.5) ## non-zero entries
     }
 
-    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,(p+2):(ncol(res)-1)], uncertain=uncertain, lambdas=res[,ncol(res)])
+    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,(p+2):(ncol(res)-1)],
+         uncertain=uncertain, lambdas=res[,ncol(res)])
 }
 
 
@@ -280,17 +375,20 @@ beem2biomass <- function(beem){
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
+##' @param m.init initial biomass values (default: use CSS normalization)
 ##' @param max.iter maximal number of iterations (default 30)
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
-##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
-##' @param alpha The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
+##' @param resample use resampling to compute stability of the interaction parameters
+##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @param refresh.iter refresh the removed samples every X iterations (default: 3)
+##' @param verbose print out messages
 ##' @param debug output debugging information (default FALSE)
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
 ##' @author Chenhao Li, Niranjan Nagarajan
-func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
-                    warm.iter=NULL, lambda.choice=1, alpha=1, debug=FALSE, refresh.iter=3){
+func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
+                    max.iter=30, warm.iter=NULL, resample=FALSE,
+                    alpha=1, refresh.iter=3, debug=FALSE, verbose=TRUE){
 
     ## pre-processing
     dat.init <- preProcess(dat, dev=0)
@@ -306,7 +404,11 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
     ## initialization
     sample.filter.iter <- dat.init$sample.filter
     tmp <- css(t(dat.tss))$normFactors
-    m.iter <- scaling * tmp/median(tmp)
+    if(is.null(m.init)) {
+        m.iter <- scaling * tmp/median(tmp)
+    }else{
+        m.iter <- scaling * m.init/median(m.init)
+    }
     trace.m <- matrix(m.iter)
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
@@ -321,12 +423,11 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
     m1 <- matrix(rep(1,nrow(sample.filter.iter)))
     ## EM
     for(iter in 1:max.iter){
-        message(paste0("############# Run for iteration ", iter,": #############"))
-        message("E-step: estimating scaled parameters...")
-        if(iter>=5) lambda.inits <- lambdas
-        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu, method='glmnet',
-                        lambda.inits=lambda.inits ,
-                        lambda.choice=lambda.choice, alpha=alpha)
+        if(verbose) message(paste0("############# Run for iteration ", iter,": #############"))
+        if(verbose) message("E-step: estimating scaled parameters...")
+        if(iter>=2) lambda.inits <- lambdas
+        tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, method='glmnet',
+                        lambda.inits=lambda.inits, alpha=alpha)
         err.p <- tmp.p$e2
         lambdas <- tmp.p$lambdas
         uncertain <- tmp.p$uncertain
@@ -340,7 +441,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
             plot(1-rowMeans(err.p, na.rm = TRUE)/apply(dat.tss[,], 1, function(x) var(x[x!=0], na.rm=TRUE) ))
             ##abline(h=0.5)
         }
-        message("M-step: estimating biomass...")
+        if(verbose) message("M-step: estimating biomass...")
         tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, ncpu)
         m.iter <- tmp.m[,1]
         err.m <- tmp.m[,-1]
@@ -352,7 +453,7 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
             }
             bad.samples <- detectBadSamples(apply(err.p, 2, median, na.rm = TRUE), dev)
             sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter
-            message(paste0("Number of samples removed (detected to be non-static): ",
+            if(verbose) message(paste0("Number of samples removed (detected to be non-static): ",
                            sum(colSums(sample.filter.iter)>0)))
             removeIter <- removeIter + 1
         }
@@ -363,20 +464,55 @@ func.EM <- function(dat, ncpu=4, scaling=10000, dev=Inf, max.iter=30,
         trace.lambda <- cbind(trace.lambda, lambdas)
         criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3
         if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
-            message("Start to detect and remove bad samples...")
+            if(verbose) message("Start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
         if (iter > 5 && !remove_non_eq && criterion && is.finite(dev)) {
-            message("Converged and start to detect and remove bad samples...")
+            if(verbose) message("Converged and start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
         if (((removeIter > 5 && remove_non_eq) || is.infinite(dev)) && criterion) {
-            message("Converged!")
+            if(verbose) message("Converged!")
             break
         }
     }
+    res.resample <- NULL
+    if(resample){
+        if(verbose) message("Estimating stability...")
+        ##res.resample <- func.E.stab(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, alpha=alpha)
+        res.resample <- resample.EM(dat[, !colSums(sample.filter.iter) > 0], m=m.iter[!colSums(sample.filter.iter) > 0],
+                                    perc=0.6, res.iter=60,
+                                    ncpu=ncpu, scaling=scaling, dev=dev, refresh.iter=refresh.iter, alpha=alpha,
+                                    max.iter=20, warm.iter=0, resample=FALSE, debug=FALSE)
+        res.resample$a.summary <- apply(res.resample$res.a, 1, median)
+        res.resample$b.summary <- matrix(apply(res.resample$res.b, 1, function(x) median(x)), nrow(dat))
+        res.resample$b.stab <- matrix(rowSums(res.sample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
+    }
     list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
          b.uncertain = uncertain, trace.lambda=trace.lambda,
+         resample=res.resample,
          sample2rm = which(colSums(sample.filter.iter) > 0))
+}
+
+##' @title resample.EM
+##'
+##' @param data data in the format of cbind(Y, X)
+##' @param m biomass initialization
+##' @param perc percentage of samples to take for each iteration
+##' @param res.iter number of resample iteration
+##' @param ... additional parameters for beemStatic::func.EM
+##' @description Resampling for the inference process
+##' @export
+##' @author Chenhao Li, Niranjan Nagarajan
+resample.EM <- function(data, m, perc, res.iter, ...) {
+    n <- ncol(data)
+    p <- nrow(data)
+    res <- foreach(i=1:res.iter, .combine=cbind) %do% {
+        message(paste0("#### Resample iteration: ", i, " #####"))
+        indices <- sort(sample(1:n, n*perc))
+        tmp <- func.EM(data[, indices], m.init=m[indices], ...)
+        tmp$trace.p[, ncol(tmp$trace.p)]
+    }
+    list(res.a = res[1:p,], res.b = res[-c(1:p),])
 }
 

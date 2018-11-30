@@ -4,9 +4,9 @@
 \alias{func.EM}
 \title{func.EM}
 \usage{
-func.EM(dat, ncpu = 4, scaling = 10000, dev = Inf, max.iter = 30,
-  warm.iter = NULL, lambda.choice = 1, alpha = 1, debug = FALSE,
-  refresh.iter = 3)
+func.EM(dat, ncpu = 4, scaling = 1000, dev = Inf, m.init = NULL,
+  max.iter = 30, warm.iter = NULL, resample = FALSE, alpha = 1,
+  refresh.iter = 3, debug = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
@@ -17,17 +17,21 @@ func.EM(dat, ncpu = 4, scaling = 10000, dev = Inf, max.iter = 30,
 
 \item{dev}{deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)}
 
+\item{m.init}{initial biomass values (default: use CSS normalization)}
+
 \item{max.iter}{maximal number of iterations (default 30)}
 
 \item{warm.iter}{number of iterations to run before removing any samples (default: run until convergence and start to remove samples)}
 
-\item{lambda.choice}{1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se}
+\item{resample}{use resampling to compute stability of the interaction parameters}
 
-\item{alpha}{The alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)}
+\item{alpha}{the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)}
+
+\item{refresh.iter}{refresh the removed samples every X iterations (default: 3)}
 
 \item{debug}{output debugging information (default FALSE)}
 
-\item{refresh.iter}{refresh the removed samples every X iterations (default: 3)}
+\item{verbose}{print out messages}
 }
 \description{
 Iteratively estimating scaled parameters and biomass
