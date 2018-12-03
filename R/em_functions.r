@@ -378,7 +378,7 @@ beem2biomass <- function(beem){
 ##' @param m.init initial biomass values (default: use CSS normalization)
 ##' @param max.iter maximal number of iterations (default 30)
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
-##' @param resample use resampling to compute stability of the interaction parameters
+##' @param resample number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)
 ##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @param refresh.iter refresh the removed samples every X iterations (default: 3)
 ##' @param verbose print out messages
@@ -387,7 +387,7 @@ beem2biomass <- function(beem){
 ##' @export
 ##' @author Chenhao Li, Niranjan Nagarajan
 func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
-                    max.iter=30, warm.iter=NULL, resample=FALSE,
+                    max.iter=30, warm.iter=NULL, resample=0,
                     alpha=1, refresh.iter=3, debug=FALSE, verbose=TRUE){
 
     ## pre-processing
@@ -477,16 +477,16 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
         }
     }
     res.resample <- NULL
-    if(resample){
+    if(resample!=0){
         if(verbose) message("Estimating stability...")
         ##res.resample <- func.E.stab(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, alpha=alpha)
         res.resample <- resample.EM(dat[, !colSums(sample.filter.iter) > 0], m=m.iter[!colSums(sample.filter.iter) > 0],
-                                    perc=0.6, res.iter=60,
+                                    perc=0.6, res.iter=resample,
                                     ncpu=ncpu, scaling=scaling, dev=dev, refresh.iter=refresh.iter, alpha=alpha,
-                                    max.iter=20, warm.iter=0, resample=FALSE, debug=FALSE)
+                                    max.iter=20, warm.iter=0, resample=0, debug=FALSE, verbose=FALSE)
         res.resample$a.summary <- apply(res.resample$res.a, 1, median)
         res.resample$b.summary <- matrix(apply(res.resample$res.b, 1, function(x) median(x)), nrow(dat))
-        res.resample$b.stab <- matrix(rowSums(res.sample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
+        res.resample$b.stab <- matrix(rowSums(res.resample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
     }
     list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
          b.uncertain = uncertain, trace.lambda=trace.lambda,
