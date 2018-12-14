@@ -88,9 +88,9 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
             s = (1-lambda.choice)*fit$lambda.min + lambda.choice*fit$lambda.1se
         }
         coefs <- coef(fit, s=s)[-1]
-        e2 <- as.numeric((Y-(X %*% coefs)[,1])^2)
+        e <- as.numeric((Y-(X %*% coefs)[,1]))
         rm(.Random.seed, envir=.GlobalEnv)
-        return(c(coefs, e2, s))
+        return(c(coefs, e, s))
     }
 }
 
@@ -243,10 +243,10 @@ func.E <- function(dat.tss, m, sample.filter, lambda.inits=NULL, ncpu=4, center=
         theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
         tmp <- infer(Y,X, lambda.init=lambda.inits[i], ...)
         theta[-(i+1)] <- tmp[1:p]
-        e2 <- rep(NA, ncol(dat.tss))
-        e2[fil] <- tmp[(p+1):(length(tmp)-1)]
+        e <- rep(NA, ncol(dat.tss))
+        e[fil] <- tmp[(p+1):(length(tmp)-1)]
         lambda <- tmp[length(tmp)]
-        c(theta, e2, lambda)
+        c(theta, e, lambda)
     }
     ## check if there is not enough information
     uncertain <- foreach(i=1:p, .combine=rbind) %dopar% {
@@ -256,7 +256,7 @@ func.E <- function(dat.tss, m, sample.filter, lambda.inits=NULL, ncpu=4, center=
         ## abs(rowSums(X!=0)/ncol(X) - 0.5) ## non-zero entries
     }
 
-    list(a=res[,1], b=postProcess(res[,1:p+1]), e2=res[,(p+2):(ncol(res)-1)],
+    list(a=res[,1], b=postProcess(res[,1:p+1]), e=res[,(p+2):(ncol(res)-1)],
          uncertain=uncertain, lambdas=res[,ncol(res)])
 }
 
@@ -428,17 +428,12 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
         if(iter>=2) lambda.inits <- lambdas
         tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, method='glmnet',
                         lambda.inits=lambda.inits, alpha=alpha)
-        err.p <- tmp.p$e2
+        err.p <- tmp.p$e
         lambdas <- tmp.p$lambdas
         uncertain <- tmp.p$uncertain
         if(debug){
             print(rowSums(tmp.p$b!=0))
-            # par(mfrow=c(6,6),mar=c(1,1,1,1))
-            # for(i in 1:nrow(dat.tss)){
-            #     plot(as.numeric(err.p[i,])~as.numeric(dat.tss[i,]))
-            # }
-            ##par(mfrow=c(1,2))
-            plot(1-rowMeans(err.p, na.rm = TRUE)/apply(dat.tss[,], 1, function(x) var(x[x!=0], na.rm=TRUE) ))
+            plot(1-rowMeans(err.p^2, na.rm = TRUE)/apply(dat.tss[,], 1, function(x) var(x[x!=0], na.rm=TRUE) ))
             ##abline(h=0.5)
         }
         if(verbose) message("M-step: estimating biomass...")
@@ -451,7 +446,7 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
             if (iter %% refresh.iter == 0 ) {
                 sample.filter.iter <- dat.init$sample.filter
             }
-            bad.samples <- detectBadSamples(apply(err.p, 2, median, na.rm = TRUE), dev)
+            bad.samples <- detectBadSamples(apply(err.p^2, 2, median, na.rm = TRUE), dev)
             sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter
             if(verbose) message(paste0("Number of samples removed (detected to be non-static): ",
                            sum(colSums(sample.filter.iter)>0)))

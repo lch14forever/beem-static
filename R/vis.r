@@ -41,7 +41,7 @@ diagnoseBiomass <- function(beem.out, true.biomass=NA, alpha=0.1,...){
 ##' @export
 diagnoseFit <- function(beem.out, dat, thre=0.5, annotate=TRUE){
     dat.tss <- tss(dat)
-    r_ss <- rowSums(beem.out$err.p, na.rm=TRUE)
+    r_ss <- rowSums(beem.out$err.p^2, na.rm=TRUE)
     if(length(beem.out$sample2rm) > 0 ) {
         dat.tss <- dat.tss[, -beem.out$sample2rm]
     }

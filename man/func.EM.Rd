@@ -5,7 +5,7 @@
 \title{func.EM}
 \usage{
 func.EM(dat, ncpu = 4, scaling = 1000, dev = Inf, m.init = NULL,
-  max.iter = 30, warm.iter = NULL, resample = FALSE, alpha = 1,
+  max.iter = 30, warm.iter = NULL, resample = 0, alpha = 1,
   refresh.iter = 3, debug = FALSE, verbose = TRUE)
 }
 \arguments{
@@ -23,7 +23,7 @@ func.EM(dat, ncpu = 4, scaling = 1000, dev = Inf, m.init = NULL,
 
 \item{warm.iter}{number of iterations to run before removing any samples (default: run until convergence and start to remove samples)}
 
-\item{resample}{use resampling to compute stability of the interaction parameters}
+\item{resample}{number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)}
 
 \item{alpha}{the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)}
 
