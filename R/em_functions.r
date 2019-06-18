@@ -1,7 +1,7 @@
 ######### internal functions #########
 
 ##' @title tss
-##'
+##'x``
 ##' @param x count matrix (each OTU in one row)
 ##' @description Calculate the relative abundances by dividing the total abundance (Total Sum Sacling)
 ##' @author Chenhao Li, Niranjan Nagarajan
@@ -207,9 +207,15 @@ norm <- function(a, b, p = NULL, s = NULL, x){
   } else{
     m <- median(res[res>0])
   }
-  err <- (m * (b %*% x) + a)[,1]/a
-  err[x==0] <- 0
-  c(m, err)
+  if (!is.null(p) || !is.null(s)) {
+    err <- (m * (b %*% x) + a + perturbation.eff)[,1]/a
+    err[x==0] <- 0
+    c(m, err)
+  } else {
+    err <- (m * (b %*% x) + a)[,1]/a
+    err[x==0] <- 0
+    c(m, err)
+  }
 }
 
 ##' @title entropy
@@ -285,7 +291,7 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
   }
   if (!is.null(external.perturbation)) {
     list(a=res[,1], b=postProcess(res[,1:p+1]), perturbation.coefficients = matrix(res[,seq(p+2,p+k+1)], ncol = k), e=res[,(p+k+2):(ncol(res)-1)],
-        uncertain=uncertain, lambdas=res[,ncol(res)])#is ncol = k correct?
+        uncertain=uncertain, lambdas=res[,ncol(res)])
   } else {
     list(a=res[,1], b=postProcess(res[,1:p+1]), e=res[,(p+2):(ncol(res)-1)],
          uncertain=uncertain, lambdas=res[,ncol(res)])
@@ -405,13 +411,17 @@ detectBadSamples <- function(err, threshold){
 ##' @export
 ##' @author Chenhao Li, Niranjan Nagarajan
 beem2param <- function(beem){
-  p <- ncol(beem$err.m)
+  p <- ncol(beem$err.m) #Number of species
   num.perturb <- (nrow(beem$trace.p) - p - p*p)/p
   tmp <- beem$trace.p[, ncol(beem$trace.p)]
   a.est <- tmp[1:p]
   b.est <- matrix(tmp[-c(1:p)], p, p)
-  c.est <- matrix(tmp[(nrow(beem$trace.p) - (num.perturb*p - 1)):nrow(beem$trace.p)], ncol = num.perturb)
-  return (list(a.est=a.est, b.est=b.est, c.est=c.est))
+  if (num.perturb == 0) {
+    return (list(a.est=a.est, b.est=b.est))
+  } else {
+    c.est <- matrix(tmp[(nrow(beem$trace.p) - (num.perturb*p - 1)):nrow(beem$trace.p)], ncol = num.perturb)
+    return (list(a.est=a.est, b.est=b.est, c.est=c.est))
+  }
 }
 
 ##' @title beem2biomass
@@ -530,7 +540,8 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
       trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = NULL, spNames, pnames = NULL)$value) #putting formatoutput into its correct new form
     }
     trace.lambda <- cbind(trace.lambda, lambdas)
-    criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3
+    criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3 #0.0025   
+    print(median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter])))
     if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
       if(verbose) message("Start to detect and remove bad samples...")
       remove_non_eq <- TRUE
@@ -541,6 +552,11 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     }
     if (((removeIter > 5 && remove_non_eq) || is.infinite(dev)) && criterion) {
       if(verbose) message("Converged!")
+      filtered = as.vector(which(colSums(sample.filter.iter) > 0))
+      perturbed.samples = as.vector(which(external.perturbation > 0))
+      print(filtered)
+      print(perturbed.samples)
+      print(sum(!is.na(match(filtered, perturbed.samples))))
       break
     }
   }
@@ -563,6 +579,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     res.resample$a.summary <- apply(res.resample$res.a, 1, median)
     res.resample$b.summary <- matrix(apply(res.resample$res.b, 1, function(x) median(x)), nrow(dat))
     res.resample$b.stab <- matrix(rowSums(res.resample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
+    res.resample$c.summary <- apply(res.resample$res.c, 1, function(x) median(x))
   }
   list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
        b.uncertain = uncertain, trace.lambda=trace.lambda,
@@ -588,12 +605,18 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
     message(paste0("#### Resample iteration: ", i, " #####"))
     indices <- sort(sample(1:n, n*perc))
     if (!is.null(external.perturbation)) {
+      num.perturb <- nrow(external.perturbation)
       tmp <- func.EM(data[, indices], external.perturbation = external.perturbation[, indices], m.init=m[indices], ...) #Include the external.perturbation argument to go back into func.EM
     } else {
       tmp <- func.EM(data[, indices], external.perturbation = NULL, m.init=m[indices], ...) 
   }
     tmp$trace.p[, ncol(tmp$trace.p)]
   }
-  list(res.a = res[1:p,], res.b = res[-c(1:p),])
+  if (!is.null(external.perturbation)) {
+    list(res.a = res[1:p,], res.b = res[(p+1):(nrow(res)-num.perturb*p),], res.c = res[(nrow(res)-num.perturb*p + 1):nrow(res),]) 
+    #Note that res.c is a vector with length num.perturb*number of species. If there are 2 perturb and 20 species, then the first 20 values will be perturb 1 on species. Then the 21-40th will be effect of perturb 2 on the species
+  } else {
+    list(res.a = res[1:p,], res.b = res[-c(1:p),])
+  }
 }
 
