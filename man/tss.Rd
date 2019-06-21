@@ -2,7 +2,8 @@
 % Please edit documentation in R/em_functions.r
 \name{tss}
 \alias{tss}
-\title{tss}
+\title{tss
+x``}
 \usage{
 tss(x)
 }

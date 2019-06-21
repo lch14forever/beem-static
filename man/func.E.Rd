@@ -4,13 +4,15 @@
 \alias{func.E}
 \title{func.E}
 \usage{
-func.E(dat.tss, m, sample.filter, lambda.inits = NULL, ncpu = 4,
-  center = FALSE, ...)
+func.E(dat.tss, external.perturbation = NULL, m, sample.filter,
+  lambda.inits = NULL, ncpu = 4, center = FALSE, ...)
 }
 \arguments{
 \item{dat.tss}{relative abundances matrix (each OTU in one row)}
 
-\item{m}{estimated biomass values}
+\item{external.perturbation}{external.perturbation presence matrix *1/m, it is a vXm where v = number of external perturbations and m = number of samples. Default = NULL}
+
+\item{m}{estimated biomass values This is a matrix of 1Xs for the total biomass for each sample, where s = number of samples}
 
 \item{sample.filter}{filter out samples contain outliers in Y}
 

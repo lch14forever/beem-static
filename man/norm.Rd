@@ -4,12 +4,16 @@
 \alias{norm}
 \title{norm}
 \usage{
-norm(a, b, x)
+norm(a, b, p = NULL, s = NULL, x)
 }
 \arguments{
 \item{a}{estimated growth rate values (scaled by self-interaction)}
 
 \item{b}{estimated interaction matrix (scaled by self-interaction)}
+
+\item{p}{estimated external perturbation effect matrix (scaled by self-interaction) default = NULL}
+
+\item{s}{external perturbation presence vector (not a matrix with a lot of samples) (binary not to be multiplied by 1/m of the sample(previous estimate))}
 
 \item{x}{abundances in one sample}
 }

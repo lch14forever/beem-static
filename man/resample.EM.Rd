@@ -4,10 +4,12 @@
 \alias{resample.EM}
 \title{resample.EM}
 \usage{
-resample.EM(data, m, perc, res.iter, ...)
+resample.EM(data, external.perturbation = NULL, m, perc, res.iter, ...)
 }
 \arguments{
 \item{data}{data in the format of cbind(Y, X)}
+
+\item{external.perturbation}{external.perturbation presence matrix (without * 1/m, since we need to get m first). vXm matrix where v = number of external perturbations and m = number of samples}
 
 \item{m}{biomass initialization}
 

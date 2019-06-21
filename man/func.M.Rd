@@ -4,7 +4,7 @@
 \alias{func.M}
 \title{func.M}
 \usage{
-func.M(dat.tss, a, b, ncpu = 4, ...)
+func.M(dat.tss, a, b, p = NULL, sm = NULL, ncpu = 4, ...)
 }
 \arguments{
 \item{dat.tss}{relative abundance matrix (each OTU in one row)}
@@ -12,6 +12,10 @@ func.M(dat.tss, a, b, ncpu = 4, ...)
 \item{a}{estimated growth rate values (scaled by self-interaction)}
 
 \item{b}{estimated interaction matrix (scaled by self-interaction)}
+
+\item{p}{estimated external perturbation effect matrix (scaled by self-interaction)}
+
+\item{sm}{estimated external perturbation presence (not to be multiplied by 1/m) vXm matrix where v = number of external perturbations and m = number of samples}
 
 \item{ncpu}{number of CPUs (default: 4)}
 }
