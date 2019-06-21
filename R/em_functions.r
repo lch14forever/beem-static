@@ -137,61 +137,61 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
 #     list(a=res[,1], b=postProcess(res[,1:p+1]), stab=res[,(p+2):ncol(res)])
 # }
 
-##' @title func.E.stab
-##'
-##' @param dat.tss relative abundances matrix (each OTU in one row)
-##' @param sample.filter filter out samples contain outliers in Y
-##' @param m estimated biomass values
-##' @param ncpu number of CPUs (default: 4)
-##' @param perc percentage of samples to take for each iteration
-##' @param niter number of iterations to run
-##' @param ... additional parameters for beemStatic:::infer
-##' @importFrom doMC registerDoMC
-##' @import foreach
-##' @description E-step with subsampling to estimate stability
-##' @author Chenhao Li, Niranjan Nagarajan
-func.E.stab <- function(dat.tss, m, sample.filter, ncpu=4, perc=0.6, niter=100, ...){
-  registerDoMC(ncpu)
-  p <- nrow(dat.tss)
-  res <- foreach(i=1:p, .combine=rbind) %do% {
-    message(paste0("Resampling for species ", i))
-    fil <- dat.tss[i,]!=0 & !sample.filter[i,]
-    X <- t(rbind(1/m, dat.tss[-i,])[,fil])
-    Y <- dat.tss[i, fil]
-    theta <- rep(0, p+1)
-    stab <- rep(1, p)
-    theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
-    tmp <- (sapply(1:niter, function(x) sub_stat(data=cbind(Y,X), perc) ))
-    theta[-(i+1)] <- apply(tmp, 1, median)
-    stab[-(i)] <- (rowSums(tmp!=0)/niter)[-1]
-    c(theta, stab)
-  }
-  list(a=res[,1], b=postProcess(res[,1:p+1]), stab=res[,(p+2):ncol(res)])
-}
+# ##' @title func.E.stab
+# ##'
+# ##' @param dat.tss relative abundances matrix (each OTU in one row)
+# ##' @param sample.filter filter out samples contain outliers in Y
+# ##' @param m estimated biomass values
+# ##' @param ncpu number of CPUs (default: 4)
+# ##' @param perc percentage of samples to take for each iteration
+# ##' @param niter number of iterations to run
+# ##' @param ... additional parameters for beemStatic:::infer
+# ##' @importFrom doMC registerDoMC
+# ##' @import foreach
+# ##' @description E-step with subsampling to estimate stability
+# ##' @author Chenhao Li, Niranjan Nagarajan
+# func.E.stab <- function(dat.tss, m, sample.filter, ncpu=4, perc=0.6, niter=100, ...){
+#   registerDoMC(ncpu)
+#   p <- nrow(dat.tss)
+#   res <- foreach(i=1:p, .combine=rbind) %do% {
+#     message(paste0("Resampling for species ", i))
+#     fil <- dat.tss[i,]!=0 & !sample.filter[i,]
+#     X <- t(rbind(1/m, dat.tss[-i,])[,fil])
+#     Y <- dat.tss[i, fil]
+#     theta <- rep(0, p+1)
+#     stab <- rep(1, p)
+#     theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
+#     tmp <- (sapply(1:niter, function(x) sub_stat(data=cbind(Y,X), perc) ))
+#     theta[-(i+1)] <- apply(tmp, 1, median)
+#     stab[-(i)] <- (rowSums(tmp!=0)/niter)[-1]
+#     c(theta, stab)
+#   }
+#   list(a=res[,1], b=postProcess(res[,1:p+1]), stab=res[,(p+2):ncol(res)])
+# }
 
-##' @title sub_stat
-##'
-##' @param data data in the format of cbind(Y, X)
-##' @param perc percentage of samples to take for each iteration
-##' @param ... additional parameters for beemStatic:::infer
-##' @description Resampling for the inference process
-##' @author Chenhao Li, Niranjan Nagarajan
-sub_stat <- function(data, perc, ...) {
-  n <- nrow(data)
-  indices <- sample(1:n, n*perc)
-  X_s <- data[indices, -1]
-  Y_s <- data[indices, 1]
-  fit <- infer(Y_s, X_s)
-  return(fit[1:ncol(X_s)])
-}
+# ##' @title sub_stat
+# ##'
+# ##' @param data data in the format of cbind(Y, X)
+# ##' @param perc percentage of samples to take for each iteration
+# ##' @param ... additional parameters for beemStatic:::infer
+# ##' @description Resampling for the inference process
+# ##' @author Chenhao Li, Niranjan Nagarajan
+# sub_stat <- function(data, perc, ...) {
+#   n <- nrow(data)
+#   indices <- sample(1:n, n*perc)
+#   X_s <- data[indices, -1]
+#   Y_s <- data[indices, 1]
+#   fit <- infer(Y_s, X_s)
+#   return(fit[1:ncol(X_s)])
+# }
 
 ##' @title norm
 ##'
 ##' @param a estimated growth rate values (scaled by self-interaction)
 ##' @param b estimated interaction matrix (scaled by self-interaction)
-##' @param x abundances in one sample
-##' @param p estimated external perturbation effect matrix (scaled by self-interaction) default = NULL
-##' @param s external perturbation presence vector (not a matrix with a lot of samples) (binary not to be multiplied by 1/m of the sample(previous estimate))
+##' @param x relative abundances in one sample 
+##' @param p estimated external perturbation effect matrix (scaled by self-interaction) (default: NULL)
+##' @param s external perturbation presence vector in one sample 
 ##' @description estimate biomass with linear regression
 ##' @author Chenhao Li, Niranjan Nagarajan
 norm <- function(a, b, p = NULL, s = NULL, x){
@@ -231,10 +231,10 @@ entropy <- function(v){
 ##' @title func.E
 ##'
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
-##' @param external.perturbation external.perturbation presence matrix *1/m, it is a vXm where v = number of external perturbations and m = number of samples. Default = NULL
+##' @param external.perturbation external.perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param sample.filter filter out samples contain outliers in Y
 ##' @param lambda.inits initial lambda values
-##' @param m estimated biomass values This is a matrix of 1Xs for the total biomass for each sample, where s = number of samples
+##' @param m estimated biomass values (1 X no. of samples) matrix 
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param center center data or not
 ##' @importFrom doMC registerDoMC
@@ -261,14 +261,14 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
     if (!is.null(external.perturbation)) {
       perturbation.coefficients <- rep(0, k) #Creating a vector to store perturbation coefficients
       external.perturbation.filtered <- external.perturbation[,fil] #Filtering out the external perturbations corresponding to samples which were filtered out
-      X <- cbind(X, t(external.perturbation.filtered)) #X has now been transposed into"infer function form" so we also need to transpose external.perturbations to input into infer function as a column variable
+      X <- cbind(X, t(external.perturbation.filtered)) 
     }
     
     tmp <- infer(Y,X, lambda.init=lambda.inits[i], ...)
     
     if (!is.null(external.perturbation)) {
       theta[-(i+1)] <- tmp[1:p]
-      perturbation.coefficient <- tmp[seq(p+1,p+k)] #for some reason when i do tmp[p+1:p+k] it won't work and give some funny out of order output, so i used the seq() instead
+      perturbation.coefficient <- tmp[seq(p+1,p+k)] 
       e <- rep(NA, ncol(dat.tss))
       e[fil] <- tmp[(p+k+1):(length(tmp)-1)]
       lambda <- tmp[length(tmp)]
@@ -305,7 +305,7 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
 ##' @param a estimated growth rate values (scaled by self-interaction)
 ##' @param b estimated interaction matrix (scaled by self-interaction)
 ##' @param p estimated external perturbation effect matrix (scaled by self-interaction)
-##' @param sm estimated external perturbation presence (not to be multiplied by 1/m) vXm matrix where v = number of external perturbations and m = number of samples
+##' @param sm estimated external perturbation presence (not to be multiplied by 1/m) (each perturbation in one row, each sample in one column)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @importFrom doMC registerDoMC
 ##' @import foreach
@@ -359,9 +359,9 @@ postProcess <- function(b, dev=1e-5){
 ##' @importFrom reshape2 melt
 ##' @param a scaled growth rates
 ##' @param b scaled interaction matrix
-##' @param c scaled external perturbation matrix
-##' @param vnames variable names
-##' @param pnames external perturbation names
+##' @param c scaled external perturbation matrix (default: NULL)
+##' @param vnames species names
+##' @param pnames external perturbation names (default: NULL)
 ##' @description Function to convert parameter vector a and matrix b to MDSINE's output format
 ##' @author Chenhao Li, Niranjan Nagarajan
 formatOutput <- function(a, b, c = NULL, vnames, pnames = NULL){
@@ -439,7 +439,7 @@ beem2biomass <- function(beem){
 ##' @title func.EM
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
-##' @param external.perturbation external.perturbation presence matrix (without * 1/m, since we need to get m first). vXm matrix where v = number of external perturbations and m = number of samples
+##' @param external.perturbation external.perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
@@ -480,7 +480,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
   trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
   trace.p <- c(paste0(NA, '->',spNames), trace.p)
   if (!is.null(external.perturbation)) {
-    external.perturbation.Names <- rownames(external.perturbation) #Creating external perturbations names variable
+    external.perturbation.Names <- rownames(external.perturbation) 
     trace.p.external.perturbation <- apply(expand.grid(spNames, external.perturbation.Names), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- append(trace.p, trace.p.external.perturbation) #Include external perturbations in the format of formatOutput function
   }
@@ -535,13 +535,12 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0], na.rm=TRUE)
     trace.m <- cbind(trace.m, m.iter)
     if (!is.null(external.perturbation)) {
-      trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = tmp.p$perturbation.coefficients, spNames, pnames = external.perturbation.Names)$value) #putting formatoutput into its correct new form
+      trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = tmp.p$perturbation.coefficients, spNames, pnames = external.perturbation.Names)$value)
     } else {
-      trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = NULL, spNames, pnames = NULL)$value) #putting formatoutput into its correct new form
+      trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = NULL, spNames, pnames = NULL)$value)
     }
     trace.lambda <- cbind(trace.lambda, lambdas)
     criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3 #0.0025   
-    print(median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter])))
     if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
       if(verbose) message("Start to detect and remove bad samples...")
       remove_non_eq <- TRUE
@@ -552,11 +551,6 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     }
     if (((removeIter > 5 && remove_non_eq) || is.infinite(dev)) && criterion) {
       if(verbose) message("Converged!")
-      filtered = as.vector(which(colSums(sample.filter.iter) > 0))
-      perturbed.samples = as.vector(which(external.perturbation > 0))
-      print(filtered)
-      print(perturbed.samples)
-      print(sum(!is.na(match(filtered, perturbed.samples))))
       break
     }
   }
@@ -575,11 +569,12 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
                                   ncpu=ncpu, scaling=scaling, dev=dev, refresh.iter=refresh.iter, alpha=alpha,
                                   max.iter=20, warm.iter=0, resample=0, debug=FALSE, verbose=FALSE)
     }
-    #for function above, we need to add in external.perturbation into the resample.EM function where we only keep the samples with sample.filter.iter having NO TRUE at all
     res.resample$a.summary <- apply(res.resample$res.a, 1, median)
     res.resample$b.summary <- matrix(apply(res.resample$res.b, 1, function(x) median(x)), nrow(dat))
     res.resample$b.stab <- matrix(rowSums(res.resample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
+    if (!is.null(external.perturbation)) {
     res.resample$c.summary <- apply(res.resample$res.c, 1, function(x) median(x))
+    }
   }
   list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
        b.uncertain = uncertain, trace.lambda=trace.lambda,
@@ -590,7 +585,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
 ##' @title resample.EM
 ##'
 ##' @param data data in the format of cbind(Y, X)
-##' @param external.perturbation external.perturbation presence matrix (without * 1/m, since we need to get m first). vXm matrix where v = number of external perturbations and m = number of samples
+##' @param external.perturbation external.perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param m biomass initialization
 ##' @param perc percentage of samples to take for each iteration
 ##' @param res.iter number of resample iteration
@@ -606,7 +601,7 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
     indices <- sort(sample(1:n, n*perc))
     if (!is.null(external.perturbation)) {
       num.perturb <- nrow(external.perturbation)
-      tmp <- func.EM(data[, indices], external.perturbation = external.perturbation[, indices], m.init=m[indices], ...) #Include the external.perturbation argument to go back into func.EM
+      tmp <- func.EM(data[, indices], external.perturbation = external.perturbation[, indices], m.init=m[indices], ...)
     } else {
       tmp <- func.EM(data[, indices], external.perturbation = NULL, m.init=m[indices], ...) 
   }
