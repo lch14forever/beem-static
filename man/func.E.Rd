@@ -10,7 +10,7 @@ func.E(dat.tss, external.perturbation = NULL, m, sample.filter,
 \arguments{
 \item{dat.tss}{relative abundances matrix (each OTU in one row)}
 
-\item{external.perturbation}{external.perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)}
+\item{external.perturbation}{external perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)}
 
 \item{m}{estimated biomass values (1 X no. of samples) matrix}
 

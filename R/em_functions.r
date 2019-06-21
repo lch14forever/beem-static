@@ -231,7 +231,7 @@ entropy <- function(v){
 ##' @title func.E
 ##'
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
-##' @param external.perturbation external.perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)
+##' @param external.perturbation external perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param sample.filter filter out samples contain outliers in Y
 ##' @param lambda.inits initial lambda values
 ##' @param m estimated biomass values (1 X no. of samples) matrix 
@@ -439,7 +439,7 @@ beem2biomass <- function(beem){
 ##' @title func.EM
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
-##' @param external.perturbation external.perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
+##' @param external.perturbation external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
@@ -574,6 +574,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     res.resample$b.stab <- matrix(rowSums(res.resample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
     if (!is.null(external.perturbation)) {
     res.resample$c.summary <- apply(res.resample$res.c, 1, function(x) median(x))
+    res.resample$c.stab <- matrix(rowSums(res.resample$res.c != 0)/ncol(res.resample$res.a), nrow(dat))
     }
   }
   list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
@@ -585,7 +586,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
 ##' @title resample.EM
 ##'
 ##' @param data data in the format of cbind(Y, X)
-##' @param external.perturbation external.perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
+##' @param external.perturbation external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param m biomass initialization
 ##' @param perc percentage of samples to take for each iteration
 ##' @param res.iter number of resample iteration

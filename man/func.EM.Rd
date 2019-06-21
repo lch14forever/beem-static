@@ -12,7 +12,7 @@ func.EM(dat, external.perturbation = NULL, ncpu = 4, scaling = 1000,
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
 
-\item{external.perturbation}{external.perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
+\item{external.perturbation}{external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
 
 \item{ncpu}{number of CPUs (default: 4)}
 

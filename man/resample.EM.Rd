@@ -9,7 +9,7 @@ resample.EM(data, external.perturbation = NULL, m, perc, res.iter, ...)
 \arguments{
 \item{data}{data in the format of cbind(Y, X)}
 
-\item{external.perturbation}{external.perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
+\item{external.perturbation}{external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
 
 \item{m}{biomass initialization}
 
