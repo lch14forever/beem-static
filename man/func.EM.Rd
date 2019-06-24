@@ -6,7 +6,7 @@
 \usage{
 func.EM(dat, ncpu = 4, scaling = 1000, dev = Inf, m.init = NULL,
   max.iter = 30, warm.iter = NULL, resample = 0, alpha = 1,
-  refresh.iter = 3, debug = FALSE, verbose = TRUE)
+  refresh.iter = 1, epsilon = 0.001, debug = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}
@@ -27,7 +27,9 @@ func.EM(dat, ncpu = 4, scaling = 1000, dev = Inf, m.init = NULL,
 
 \item{alpha}{the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)}
 
-\item{refresh.iter}{refresh the removed samples every X iterations (default: 3)}
+\item{refresh.iter}{refresh the removed samples every X iterations (default: 1)}
+
+\item{epsilon}{convergence threshold (in relative difference): uqn of the relative error in biomass changes (default 1e-3)}
 
 \item{debug}{output debugging information (default FALSE)}
 

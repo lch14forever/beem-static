@@ -33,11 +33,11 @@ devtools::use_data(beemDemo)
 devtools::load_all()
 
 ##############################################################################
-
+library(beemStatic)
 data("beemDemo")
 attach(beemDemo)
 
-res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=60)
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200, epsilon = 1e-4)
 
 diagnoseFit(res, dat.w.noise, annotate = FALSE)
 
@@ -52,8 +52,6 @@ showInteraction(res, dat.w.noise)
 par(mfrow=c(1,2))
 plot(est$a.est, scaled.params$a.truth, xlab='BEEM estimation', ylab='Truth', main='Growth rates')
 auc.b(est$b.est, scaled.params$b.truth, main='Interaction matrix')
-
-
 
 spearman <- cor(t(dat.w.noise), method='spearman')
 
@@ -73,3 +71,5 @@ tmp <- scaled.params$b.truth
 tmp[tmp!=0 & res$b.uncertain<0.5] <- 0
 auc.b(est$b.est, scaled.params$b.truth, main='BEEM-static')
 auc.b(est$b.est, tmp, main='BEEM-static (excluding uncertain edges)')
+
+

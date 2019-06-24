@@ -22,9 +22,8 @@ css <- function(m, p=0.5){
     f <- rowSums(m*sweep(m, 1, quant, '<='),na.rm = TRUE)
     nf <- f/exp(mean(log(f)))
     dat.css <- sweep(m,1,nf, '/')
-    return(list("normCounts" = dat.css, "normFactors"=nf))
+    return(list("normCounts" = dat.css, "normFactors"=1/nf))
 }
-
 
 ##' @title infer
 ##'
@@ -40,7 +39,10 @@ css <- function(m, p=0.5){
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Niranjan Nagarajan
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambda.init=NULL, lambda.choice=1, nfolds=5){
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfolds=5,
+                  lambda.init=NULL, lambda.choice=1){
+    lambda.lower <- 10e-9
+    lambda.upper <- 1
     set.seed(seed)
     if(method=='lm'){
         return(as.numeric(coef(lm(Y~X+0))))
@@ -51,32 +53,20 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, lambd
         idx <- Y <= maxmin[1] & Y >=maxmin[2]
         if(is.null(lambda.init)){
             ## select a lambda range first
-            lambda.init <- rev(10^(seq(-9,-1, length.out = 20)))
+            lambda.init <- rev(exp(seq(log(lambda.lower), log(lambda.upper), length.out = 50)))
             fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda.init, nfolds=nfolds,
                          penalty.factor=penalty, alpha=alpha)
-            lambda <- rev(exp(seq(log(fit$lambda.min/10), log(fit$lambda.min*10), length.out = 50)))
+            lambda <- rev(exp(seq(
+                max(log(fit$lambda.min/10), log(lambda.lower)),
+                min(log(fit$lambda.min*10), log(lambda.upper)),
+                length.out = 50)))
         }else{
-            lambda <- rev(exp(seq(log(lambda.init/2), log(lambda.init), length.out = 10)))
+            ## adjust lambda by up to 50%
+            lambda <- rev(exp(seq(
+                max(log(lambda.init/2), log(lambda.lower)), ## bounded by the min lambda
+                min(log(lambda.init*1.5), log(lambda.upper)), ## bounded by the max lambda
+                length.out = 20)))
         }
-
-        # ## Iteratively fit models
-        # lambdas <- NULL #initialize
-        # for (i in 1:5) {
-        #     fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
-        #                      penalty.factor=penalty, alpha=alpha)
-        #     if(lambda.choice == 1){
-        #         s = fit$lambda.1se
-        #     }else if(lambda.choice == 2){
-        #         s = fit$lambda.min
-        #     }else{
-        #         s = (1-lambda.choice)*fit$lambda.min + lambda.choice*fit$lambda.1se
-        #     }
-        #
-        #     df <- data.frame(s, median(fit$cvm) ) #can use median for CVM also
-        #     lambdas <- rbind(lambdas, df)
-        # }
-        # ## Select best lambda:
-        # s <- median(lambdas[, 1])
 
         fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
                          penalty.factor=penalty, alpha=alpha)
@@ -380,7 +370,8 @@ beem2biomass <- function(beem){
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
 ##' @param resample number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)
 ##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
-##' @param refresh.iter refresh the removed samples every X iterations (default: 3)
+##' @param refresh.iter refresh the removed samples every X iterations (default: 1)
+##' @param epsilon convergence threshold (in relative difference): uqn of the relative error in biomass changes (default 1e-3)
 ##' @param verbose print out messages
 ##' @param debug output debugging information (default FALSE)
 ##' @description Iteratively estimating scaled parameters and biomass
@@ -388,7 +379,8 @@ beem2biomass <- function(beem){
 ##' @author Chenhao Li, Niranjan Nagarajan
 func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
                     max.iter=30, warm.iter=NULL, resample=0,
-                    alpha=1, refresh.iter=3, debug=FALSE, verbose=TRUE){
+                    alpha=1, refresh.iter=1, epsilon=1e-3,
+                    debug=FALSE, verbose=TRUE){
 
     ## pre-processing
     dat.init <- preProcess(dat, dev=0)
@@ -409,6 +401,7 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
     }else{
         m.iter <- scaling * m.init/median(m.init)
     }
+
     trace.m <- matrix(m.iter)
     trace.p <- apply(expand.grid(spNames, spNames), 1, function(x) paste0(x[2], '->', x[1]))
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
@@ -452,12 +445,13 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
                            sum(colSums(sample.filter.iter)>0)))
             removeIter <- removeIter + 1
         }
-
-        m.iter <- m.iter*scaling/median(m.iter[colSums(sample.filter.iter)==0], na.rm=TRUE)
+        m.fil <- colSums(sample.filter.iter)==0
+        m.iter <- m.iter*scaling/median(m.iter[m.fil], na.rm=TRUE)
         trace.m <- cbind(trace.m, m.iter)
         trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, spNames)$value)
         trace.lambda <- cbind(trace.lambda, lambdas)
-        criterion <- median(abs((trace.m[, iter+1] - trace.m[, iter])/trace.m[, iter]))<1e-3
+        summary.m <- apply(trace.m[m.fil, ], 1, function(x) median(rev(x)[1:min(5,length(x))]))
+        criterion <- quantile(abs((trace.m[m.fil, iter+1] - summary.m)/summary.m), 0.75)<epsilon
         if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
             if(verbose) message("Start to detect and remove bad samples...")
             remove_non_eq <- TRUE
@@ -482,10 +476,12 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
         res.resample$a.summary <- apply(res.resample$res.a, 1, median)
         res.resample$b.summary <- matrix(apply(res.resample$res.b, 1, function(x) median(x)), nrow(dat))
         res.resample$b.stab <- matrix(rowSums(res.resample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
+        res.resample$m.summary <- apply(res.resample$res.m, 1, median, na.rm=TRUE)
     }
     list(trace.m=trace.m, trace.p=trace.p, err.m=err.m, err.p=err.p,
          b.uncertain = uncertain, trace.lambda=trace.lambda,
          resample=res.resample,
+         dev=dev,
          sample2rm = which(colSums(sample.filter.iter) > 0))
 }
 
@@ -502,12 +498,45 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
 resample.EM <- function(data, m, perc, res.iter, ...) {
     n <- ncol(data)
     p <- nrow(data)
-    res <- foreach(i=1:res.iter, .combine=cbind) %do% {
+    res_p <- data.frame(matrix(NA, p*(p+1), res.iter))
+    res_m <- data.frame(matrix(NA, n, res.iter))
+
+    for(i in 1:res.iter){
         message(paste0("#### Resample iteration: ", i, " #####"))
         indices <- sort(sample(1:n, n*perc))
         tmp <- func.EM(data[, indices], m.init=m[indices], ...)
-        tmp$trace.p[, ncol(tmp$trace.p)]
+        res_p[,i] <- tmp$trace.p[, ncol(tmp$trace.p)]
+        res_m[indices,i] <- tmp$trace.m[, ncol(tmp$trace.m)]
     }
-    list(res.a = res[1:p,], res.b = res[-c(1:p),])
+    list(res.a = res_p[1:p,], res.b = res_p[-c(1:p),], res.m = res_m)
+}
+
+##' @title predict_beem
+##'
+##' @param dat.new OTU count/relative abundance matrix (each OTU in one row)
+##' @param beem output of the EM algorithm
+##' @param dev deviation of the error (for one sample) from the model to be excluded
+##' @param ncpu number of CPUs (default: 4)
+##' @description Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
+##' @export
+##' @author Chenhao Li, Niranjan Nagarajan
+predict_beem <- function(dat.new, beem, dev, ncpu=4){
+    ### currently not ready for an S3mehtod yet
+    param <- beem2param(beem)
+    dat.new.tss <- tss(dat.new)
+    tmp.m <- func.M(dat.new.tss, param$a.est, param$b.est, ncpu)
+    m.pred <- tmp.m[,1]
+    err.m.pred <- tmp.m[,-1]
+
+    registerDoMC(ncpu)
+    p <- nrow(dat.new.tss)
+    e <- foreach(i=1:p, .combine=rbind) %dopar% {
+        X <- t(rbind(1/m.pred, dat.new.tss[-i,]))
+        Y <- dat.new.tss[i, ]
+        coefs <- param$b.est[i,]
+        as.numeric((Y-(X %*% coefs)[,1]))
+    }
+    isBad <- detectBadSamples(apply(e^2, 2, median, na.rm = TRUE), dev)
+    return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad))
 }
 
