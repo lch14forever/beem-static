@@ -367,7 +367,8 @@ beem2biomass <- function(beem){
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
 ##' @param m.init initial biomass values (default: use CSS normalization)
 ##' @param max.iter maximal number of iterations (default 30)
-##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
+##' @param warm.iter number of iterations to run before removing any samples and stop adjusting lambda (default: run until convergence and start to remove samples)
+##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
 ##' @param resample number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)
 ##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @param refresh.iter refresh the removed samples every X iterations (default: 1)
@@ -378,7 +379,7 @@ beem2biomass <- function(beem){
 ##' @export
 ##' @author Chenhao Li, Niranjan Nagarajan
 func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
-                    max.iter=30, warm.iter=NULL, resample=0,
+                    max.iter=30, warm.iter=NULL, lambda.choice=1, resample=0,
                     alpha=1, refresh.iter=1, epsilon=1e-3,
                     debug=FALSE, verbose=TRUE){
 
@@ -420,7 +421,7 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
         if(verbose) message("E-step: estimating scaled parameters...")
         if(iter>=2) lambda.inits <- lambdas
         tmp.p <- func.E(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, method='glmnet',
-                        lambda.inits=lambda.inits, alpha=alpha)
+                        lambda.inits=lambda.inits, alpha=alpha, lambda.choice=lambda.choice)
         err.p <- tmp.p$e
         lambdas <- tmp.p$lambdas
         uncertain <- tmp.p$uncertain
@@ -470,7 +471,7 @@ func.EM <- function(dat, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
         if(verbose) message("Estimating stability...")
         ##res.resample <- func.E.stab(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, alpha=alpha)
         res.resample <- resample.EM(dat[, !colSums(sample.filter.iter) > 0], m=m.iter[!colSums(sample.filter.iter) > 0],
-                                    perc=0.6, res.iter=resample,
+                                    perc=0.6, res.iter=resample, lambda.choice=lambda.choice,
                                     ncpu=ncpu, scaling=scaling, dev=dev, refresh.iter=refresh.iter, alpha=alpha,
                                     max.iter=20, warm.iter=0, resample=0, debug=FALSE, verbose=FALSE)
         res.resample$a.summary <- apply(res.resample$res.a, 1, median)
