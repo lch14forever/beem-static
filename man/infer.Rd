@@ -30,5 +30,5 @@ infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
 Infer parameters with blasso
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

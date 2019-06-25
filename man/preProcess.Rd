@@ -15,5 +15,5 @@ preProcess(dat, dev = 0)
 pre-process data
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

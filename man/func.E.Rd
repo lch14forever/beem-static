@@ -4,13 +4,15 @@
 \alias{func.E}
 \title{func.E}
 \usage{
-func.E(dat.tss, m, sample.filter, lambda.inits = NULL, ncpu = 4,
-  center = FALSE, ...)
+func.E(dat.tss, external.perturbation = NULL, m, sample.filter,
+  lambda.inits = NULL, ncpu = 4, center = FALSE, ...)
 }
 \arguments{
 \item{dat.tss}{relative abundances matrix (each OTU in one row)}
 
-\item{m}{estimated biomass values}
+\item{external.perturbation}{external perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)}
+
+\item{m}{estimated biomass values (1 X no. of samples) matrix}
 
 \item{sample.filter}{filter out samples contain outliers in Y}
 
@@ -19,10 +21,12 @@ func.E(dat.tss, m, sample.filter, lambda.inits = NULL, ncpu = 4,
 \item{ncpu}{number of CPUs (default: 4)}
 
 \item{center}{center data or not}
+
+\item{...}{additional parameters for `beemStatic::infer`}
 }
 \description{
 E-part of BEEM, estimate model parameters with inferred m
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

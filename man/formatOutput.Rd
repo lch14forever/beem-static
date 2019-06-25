@@ -4,18 +4,22 @@
 \alias{formatOutput}
 \title{formatOutput}
 \usage{
-formatOutput(a, b, vnames)
+formatOutput(a, b, c = NULL, vnames, pnames = NULL)
 }
 \arguments{
 \item{a}{scaled growth rates}
 
 \item{b}{scaled interaction matrix}
 
-\item{vnames}{variable names}
+\item{c}{scaled external perturbation matrix (default: NULL)}
+
+\item{vnames}{species names}
+
+\item{pnames}{external perturbation names (default: NULL)}
 }
 \description{
 Function to convert parameter vector a and matrix b to MDSINE's output format
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

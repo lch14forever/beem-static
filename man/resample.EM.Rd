@@ -4,10 +4,12 @@
 \alias{resample.EM}
 \title{resample.EM}
 \usage{
-resample.EM(data, m, perc, res.iter, ...)
+resample.EM(data, external.perturbation = NULL, m, perc, res.iter, ...)
 }
 \arguments{
 \item{data}{data in the format of cbind(Y, X)}
+
+\item{external.perturbation}{external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
 
 \item{m}{biomass initialization}
 
@@ -21,5 +23,5 @@ resample.EM(data, m, perc, res.iter, ...)
 Resampling for the inference process
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

@@ -4,7 +4,8 @@
 \alias{func.M}
 \title{func.M}
 \usage{
-func.M(dat.tss, a, b, ncpu = 4, ...)
+func.M(dat.tss, a, b, c = NULL, perturbation.presence = NULL,
+  ncpu = 4)
 }
 \arguments{
 \item{dat.tss}{relative abundance matrix (each OTU in one row)}
@@ -13,11 +14,15 @@ func.M(dat.tss, a, b, ncpu = 4, ...)
 
 \item{b}{estimated interaction matrix (scaled by self-interaction)}
 
+\item{c}{estimated external perturbation effect matrix (scaled by self-interaction)}
+
+\item{perturbation.presence}{estimated external perturbation presence (not to be multiplied by 1/m) (each perturbation in one row, each sample in one column)}
+
 \item{ncpu}{number of CPUs (default: 4)}
 }
 \description{
 M-part of BEEM, estimate biomass with inferred model parameters
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

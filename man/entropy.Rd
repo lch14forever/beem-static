@@ -13,5 +13,5 @@ entropy(v)
 Compute the entropy of a binary vector
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

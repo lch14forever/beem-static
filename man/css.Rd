@@ -15,5 +15,5 @@ css(m, p = 0.5)
 Function to perform cumulative sum scaling (CSS)
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

@@ -19,5 +19,5 @@ predict_beem(dat.new, beem, dev, ncpu = 4)
 Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

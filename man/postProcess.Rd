@@ -15,5 +15,5 @@ postProcess(b, dev = 1e-05)
 post-process parameters to remove small entries
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

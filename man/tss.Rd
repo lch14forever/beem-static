@@ -13,5 +13,5 @@ tss(x)
 Calculate the relative abundances by dividing the total abundance (Total Sum Sacling)
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

@@ -4,18 +4,22 @@
 \alias{norm}
 \title{norm}
 \usage{
-norm(a, b, x)
+norm(a, b, c = NULL, s = NULL, x)
 }
 \arguments{
 \item{a}{estimated growth rate values (scaled by self-interaction)}
 
 \item{b}{estimated interaction matrix (scaled by self-interaction)}
 
-\item{x}{abundances in one sample}
+\item{c}{estimated external perturbation effect matrix (scaled by self-interaction) (default: NULL)}
+
+\item{s}{external perturbation presence vector in one sample}
+
+\item{x}{relative abundances in one sample}
 }
 \description{
 estimate biomass with linear regression
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }

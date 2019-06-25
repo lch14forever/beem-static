@@ -15,5 +15,5 @@ detectBadSamples(err, threshold)
 detectBadSamples
 }
 \author{
-Chenhao Li, Niranjan Nagarajan
+Chenhao Li, Gerald Tan, Niranjan Nagarajan
 }
