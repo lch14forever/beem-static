@@ -294,7 +294,7 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
   }
   if (!is.null(external.perturbation)) {
     list(a=res[,1], b=postProcess_species(res[,1:p+1]), 
-         perturbation.coefficients = postProcess_perturbation(matrix(res[,seq(p+2,p+k+1)], ncol = k), res[,1]), #Check whether this res[,1] is correct using the current iteration of growth rate
+         perturbation.coefficients = postProcess_perturbation(matrix(res[,seq(p+2,p+k+1)], ncol = k), res[,1]), 
          e=res[,(p+k+2):(ncol(res)-1)],
          uncertain=uncertain, lambdas=res[,ncol(res)])
   } else {
