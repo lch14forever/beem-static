@@ -1,14 +1,3 @@
-library(foreach)
-library(data.table)
-library(doMC)
-library(foreach)
-library(glmnet)
-library(reshape2)
-library(deSolve)
-library(reshape2)
-
-
-###FUNCTIONS###
 ######### internal functions #########
 
 ##' @title tss
@@ -78,7 +67,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfold
         min(log(lambda.init*1.5), log(lambda.upper)), ## bounded by the max lambda
         length.out = 20)))
     }
-    
+
     fit <- cv.glmnet(X[idx,], Y[idx], intercept=intercept, lambda=lambda,  nfolds=nfolds,
                      penalty.factor=penalty, alpha=alpha)
     if(lambda.choice == 1){
@@ -216,7 +205,7 @@ norm <- function(a, b, c = NULL, s = NULL, x){
   }
   err[x==0] <- 0
   c(m, err)
-  
+
 }
 
 ##' @title entropy
@@ -230,7 +219,7 @@ entropy <- function(v){
 }
 
 ##' @title func.E
-##' 
+##'
 ##'
 ##' @param dat.tss relative abundances matrix (each OTU in one row)
 ##' @param external.perturbation external perturbation presence matrix *1/m (each perturbation in one row, each sample in one column) (Default: NULL)
@@ -266,9 +255,9 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
       external.perturbation.filtered <- external.perturbation[,fil] #Filtering out the external perturbations corresponding to samples which were filtered out
       X <- cbind(X, t(external.perturbation.filtered))
     }
-    
+
     tmp <- infer(Y,X, lambda.init=lambda.inits[i], ...)
-    
+
     if (!is.null(external.perturbation)) {
       theta[-(i+1)] <- tmp[1:p]
       perturbation.coefficient <- tmp[seq(p+1,p+k)]
@@ -284,7 +273,7 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
       c(theta, e, lambda)
     }
   }
-  
+
   ## check if there is not enough information
   uncertain <- foreach(i=1:p, .combine=rbind) %dopar% {
     fil <- dat.tss[i,]!=0
@@ -293,8 +282,8 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
     ## abs(rowSums(X!=0)/ncol(X) - 0.5) ## non-zero entries
   }
   if (!is.null(external.perturbation)) {
-    list(a=res[,1], b=postProcess_species(res[,1:p+1]), 
-         perturbation.coefficients = postProcess_perturbation(matrix(res[,seq(p+2,p+k+1)], ncol = k), res[,1]), 
+    list(a=res[,1], b=postProcess_species(res[,1:p+1]),
+         perturbation.coefficients = postProcess_perturbation(matrix(res[,seq(p+2,p+k+1)], ncol = k), res[,1]),
          e=res[,(p+k+2):(ncol(res)-1)],
          uncertain=uncertain, lambdas=res[,ncol(res)])
   } else {
@@ -403,7 +392,7 @@ formatOutput <- function(a, b, c = NULL, vnames, pnames = NULL){
   }
   param$external_perturbation <- c(rep(NA,p), rep(NA,p*p), rep(pnames, each = p)) #Creating the vector for external perturbations
   param
-  
+
 }
 
 
@@ -477,18 +466,18 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
                     max.iter=30, warm.iter=NULL, lambda.choice=1, resample=0,
                     alpha=1, refresh.iter=1, epsilon=1e-3,
                     debug=FALSE, verbose=TRUE){
-  
+
   ## pre-processing
   dat.init <- preProcess(dat, dev=0)
   dat.tss <- dat.init$tss
   spNames <- rownames(dat)
-  
+
   ## ensure valid samples
   temp <- colSums(dat.tss, na.rm = TRUE) == 0
   if(any(temp)){
     stop(paste0('Sample ', which(temp), ' has zero total abudance...'))
   }
-  
+
   ## initialization
   sample.filter.iter <- dat.init$sample.filter
   tmp <- css(t(dat.tss))$normFactors
@@ -511,7 +500,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
   ## flags
   remove_non_eq <- FALSE
   removeIter <- 0
-  
+
   ## constants
   m1 <- matrix(rep(1,nrow(sample.filter.iter)))
   ## EM
@@ -535,7 +524,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
       plot(1-rowMeans(err.p^2, na.rm = TRUE)/apply(dat.tss[,], 1, function(x) var(x[x!=0], na.rm=TRUE) ))
       ##abline(h=0.5)
     }
-    
+
     if(verbose) message("M-step: estimating biomass...")
     if (!is.null(external.perturbation)) {
       tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, c = tmp.p$perturbation.coefficients, perturbation.presence = external.perturbation, ncpu)
@@ -544,7 +533,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     }
     m.iter <- tmp.m[,1]
     err.m <- tmp.m[,-1]
-    
+
     if(remove_non_eq){
       ## clear up removed samples every X iterations
       if (iter %% refresh.iter == 0 ) {
@@ -565,12 +554,12 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     } else {
       trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = NULL, spNames, pnames = NULL)$value)
     }
-    
+
     trace.lambda <- cbind(trace.lambda, lambdas)
     summary.m <- apply(trace.m[m.fil, ], 1, function(x) median(rev(x)[1:min(5,length(x))]))
     #criterion <- quantile(abs((trace.m[m.fil, iter+1] - summary.m)/summary.m), 1)<epsilon
-    criterion <- median(abs((trace.m[m.fil, iter+1] - trace.m[m.fil, iter])/trace.m[m.fil, iter]))<epsilon #0.0025   
-    
+    criterion <- median(abs((trace.m[m.fil, iter+1] - trace.m[m.fil, iter])/trace.m[m.fil, iter]))<epsilon #0.0025
+
     if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
       if(verbose) message("Start to detect and remove bad samples...")
       remove_non_eq <- TRUE
@@ -585,7 +574,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
     }
   }
   res.resample <- NULL
-  
+
   if(resample!=0){
     if(verbose) message("Estimating stability...")
     ##res.resample <- func.E.stab(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, alpha=alpha)
@@ -631,7 +620,7 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
   p <- nrow(data)
   res_p <- data.frame(matrix(NA, p*(p+1), res.iter))
   res_m <- data.frame(matrix(NA, n, res.iter))
-  
+
   for(i in 1:res.iter){
     message(paste0("#### Resample iteration: ", i, " #####"))
     indices <- sort(sample(1:n, n*perc))
@@ -649,7 +638,7 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
   } else {
     list(res.a = res_p[1:p,], res.b = res_p[-c(1:p),], res.m = res_m)
   }
-  
+
   list(res.a = res_p[1:p,], res.b = res_p[-c(1:p),])
 }
 
@@ -674,7 +663,7 @@ predict_beem <- function(dat.new, pert.new = NULL, beem, dev, ncpu=4){
   }
   m.pred <- tmp.m[,1]
   err.m.pred <- tmp.m[,-1]
-  
+
   registerDoMC(ncpu)
   p <- nrow(dat.new.tss)
   e <- foreach(i=1:p, .combine=rbind) %dopar% {
@@ -683,7 +672,7 @@ predict_beem <- function(dat.new, pert.new = NULL, beem, dev, ncpu=4){
     Y <- dat.new.tss[i, ]
     coefs <- c(param$a.est[i], param$b.est[i,-i])
     coefs_pert <- param$c.est[i,]
-    as.numeric((Y - (X %*% coefs)[,1] - (1/m.pred) * ((pert %*% coefs_pert)[,1]) ) ) 
+    as.numeric((Y - (X %*% coefs)[,1] - (1/m.pred) * ((pert %*% coefs_pert)[,1]) ) )
   }
   isBad <- detectBadSamples(apply(e^2, 2, median, na.rm = TRUE), dev)
   return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad))
