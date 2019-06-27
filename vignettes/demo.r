@@ -37,7 +37,7 @@ library(beemStatic)
 data("beemDemo")
 attach(beemDemo)
 
-res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200)
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200, alpha = 0.5)
 
 diagnoseFit(res, dat.w.noise, annotate = FALSE)
 

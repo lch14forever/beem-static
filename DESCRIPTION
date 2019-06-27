@@ -1,16 +1,17 @@
 Package: beemStatic
 Title: An EM-like algorithm for biomass and microbiome model inference from cross sectional microbial profiling data 
 Version: 0.0.0.9000
-Author: Chenhao Li, Niranjan Nagarajan
+Author: Chenhao Li, Gerald Tan, Niranjan Nagarajan
 Maintainer: Chenhao Li <lich@gis.a-star.edu.sg>
 Description: What the package does (one paragraph).
-Depends: R (>= 3.4.0)
+Depends: 
+    R (>= 3.4.0)
 Imports:
     foreach,
-    doMC,
+    doParallel,
+    glmnet,
     ggplot2,
     ggrepel,
-    glmnet,
     vegan,
     reshape2,
 Suggests:

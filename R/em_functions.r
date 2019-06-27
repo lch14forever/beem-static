@@ -105,12 +105,12 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfold
 # ##' @param m estimated biomass values
 # ##' @param ncpu number of CPUs (default: 4)
 # ##' @importFrom boot boot
-# ##' @importFrom doMC registerDoMC
+# ##' @importFrom doParallel registerDoParallel
 # ##' @import foreach
 # ##' @description bootstrapped E-step
 # ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 # func.E.boot <- function(dat.tss, m, sample.filter, ncpu=4, ...){
-#     registerDoMC(ncpu)
+#     registerDoParallel(ncpu)
 #     p <- nrow(dat.tss)
 #     res <- foreach(i=1:p, .combine=rbind) %do% {
 #         message(paste0("Bootstrapping for species ", i))
@@ -137,12 +137,12 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfold
 # ##' @param perc percentage of samples to take for each iteration
 # ##' @param niter number of iterations to run
 # ##' @param ... additional parameters for beemStatic:::infer
-# ##' @importFrom doMC registerDoMC
+# ##' @importFrom doParallel registerDoParallel
 # ##' @import foreach
 # ##' @description E-step with subsampling to estimate stability
 # ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 # func.E.stab <- function(dat.tss, m, sample.filter, ncpu=4, perc=0.6, niter=100, ...){
-#   registerDoMC(ncpu)
+#   registerDoParallel(ncpu)
 #   p <- nrow(dat.tss)
 #   res <- foreach(i=1:p, .combine=rbind) %do% {
 #     message(paste0("Resampling for species ", i))
@@ -229,13 +229,13 @@ entropy <- function(v){
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param center center data or not
 ##' @param ... additional parameters for `beemStatic::infer`
-##' @importFrom doMC registerDoMC
+##' @importFrom doParallel registerDoParallel
 ##' @import foreach
 ##' @description E-part of BEEM, estimate model parameters with inferred m
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lambda.inits=NULL, ncpu=4, center=FALSE, ...){
   ## infer parameter for each OTU
-  registerDoMC(ncpu)
+  registerDoParallel(ncpu)
   p <- nrow(dat.tss)
   if (!is.null(external.perturbation)) {
     k <- nrow(external.perturbation) #Number of external perturbations
@@ -301,12 +301,12 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
 ##' @param c estimated external perturbation effect matrix (scaled by self-interaction)
 ##' @param perturbation.presence estimated external perturbation presence (not to be multiplied by 1/m) (each perturbation in one row, each sample in one column)
 ##' @param ncpu number of CPUs (default: 4)
-##' @importFrom doMC registerDoMC
+##' @importFrom doParallel registerDoParallel
 ##' @import foreach
 ##' @description M-part of BEEM, estimate biomass with inferred model parameters
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 func.M <- function(dat.tss, a, b, c = NULL, perturbation.presence=NULL, ncpu=4){
-  registerDoMC(ncpu)
+  registerDoParallel(ncpu)
   foreach(i=1:ncol(dat.tss), .combine=rbind) %dopar%{
     x <- dat.tss[,i]
     if (!is.null(c) || !is.null(perturbation.presence)) {
@@ -649,6 +649,7 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
 ##' @param beem output of the EM algorithm
 ##' @param dev deviation of the error (for one sample) from the model to be excluded
 ##' @param ncpu number of CPUs (default: 4)
+##' @importFrom doParallel registerDoParallel
 ##' @description Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
@@ -664,7 +665,7 @@ predict_beem <- function(dat.new, pert.new = NULL, beem, dev, ncpu=4){
   m.pred <- tmp.m[,1]
   err.m.pred <- tmp.m[,-1]
 
-  registerDoMC(ncpu)
+  registerDoParallel(ncpu)
   p <- nrow(dat.new.tss)
   e <- foreach(i=1:p, .combine=rbind) %dopar% {
     X <- t(rbind(1/m.pred, dat.new.tss[-i,]))
