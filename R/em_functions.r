@@ -649,18 +649,19 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
 ##' @param beem output of the EM algorithm
 ##' @param dev deviation of the error (for one sample) from the model to be excluded
 ##' @param ncpu number of CPUs (default: 4)
+##' @param pert.new external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @importFrom doParallel registerDoParallel
 ##' @description Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-predict_beem <- function(dat.new, pert.new = NULL, beem, dev, ncpu=4){
+predict_beem <- function(dat.new, beem, dev, ncpu=4, pert.new = NULL){
   ### currently not ready for an S3method yet
   param <- beem2param(beem)
   dat.new.tss <- tss(dat.new)
   if (!is.null(pert.new)){
     tmp.m <- func.M(dat.new.tss, param$a.est, param$b.est, c = param$c.est, perturbation.presence = pert.new, ncpu = 1)
   } else {
-    tmp.m <- func.M(dat.new.tss, param$a.est, param$b.est, ncpu)
+    tmp.m <- func.M(dat.new.tss, param$a.est, param$b.est, ncpu=ncpu)
   }
   m.pred <- tmp.m[,1]
   err.m.pred <- tmp.m[,-1]
@@ -669,11 +670,15 @@ predict_beem <- function(dat.new, pert.new = NULL, beem, dev, ncpu=4){
   p <- nrow(dat.new.tss)
   e <- foreach(i=1:p, .combine=rbind) %dopar% {
     X <- t(rbind(1/m.pred, dat.new.tss[-i,]))
-    pert <- t(pert.new)
     Y <- dat.new.tss[i, ]
     coefs <- c(param$a.est[i], param$b.est[i,-i])
-    coefs_pert <- param$c.est[i,]
-    as.numeric((Y - (X %*% coefs)[,1] - (1/m.pred) * ((pert %*% coefs_pert)[,1]) ) )
+    if(!is.null(param$c.est)){
+        pert <- t(pert.new)
+        coefs_pert <- param$c.est[i,]
+        as.numeric(Y - (X %*% coefs)[,1] - (1/m.pred) * ((pert %*% coefs_pert)[,1]) )
+    }else{
+        as.numeric((Y - (X %*% coefs)[,1] ) )
+    }
   }
   isBad <- detectBadSamples(apply(e^2, 2, median, na.rm = TRUE), dev)
   return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad))
