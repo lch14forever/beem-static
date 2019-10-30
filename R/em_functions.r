@@ -22,8 +22,20 @@ css <- function(m, p=0.5){
   f <- rowSums(m*sweep(m, 1, quant, '<='),na.rm = TRUE)
   nf <- f/exp(mean(log(f)))
   dat.css <- sweep(m,1,nf, '/')
-  return(list("normCounts" = dat.css, "normFactors"=nf))
+  return(list("normCounts" = dat.css, "normFactors"=1/nf))
 }
+
+##' @title biomassInit
+##'
+##' @param m matrix of data (variables in columns, measurements in rows)
+##' @description Function to initialize biomass. This normalization assumes that all samples are at the equilibrium and there is no interaction at all.
+##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
+biomassInit <- function(m){
+    rowMed <- apply(tss(m), 1, function(x) median(x[x!=0]))
+    biomass <- colSums((m > 0)*rowMed)
+    return(biomass)
+}
+
 
 ##' @title infer
 ##'
@@ -64,7 +76,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfold
       ## adjust lambda by up to 50%
       lambda <- rev(exp(seq(
         max(log(lambda.init/2), log(lambda.lower)), ## bounded by the min lambda
-        min(log(lambda.init*1.5), log(lambda.upper)), ## bounded by the max lambda
+        min(log(lambda.init*1), log(lambda.upper)), ## bounded by the max lambda
         length.out = 20)))
     }
 
@@ -451,7 +463,8 @@ beem2biomass <- function(beem){
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
 ##' @param m.init initial biomass values (default: use CSS normalization)
 ##' @param max.iter maximal number of iterations (default 30)
-##' @param warm.iter number of iterations to run before removing any samples and stop adjusting lambda (default: run until convergence and start to remove samples)
+##' @param lambda.iter number of iterations to run before fixing lambda (default: 2)
+##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
 ##' @param resample number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)
 ##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
@@ -463,7 +476,7 @@ beem2biomass <- function(beem){
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
-                    max.iter=30, warm.iter=NULL, lambda.choice=1, resample=0,
+                    max.iter=30, lambda.iter=2, warm.iter=NULL, lambda.choice=1, resample=0,
                     alpha=1, refresh.iter=1, epsilon=1e-3,
                     debug=FALSE, verbose=TRUE){
 
@@ -477,10 +490,14 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
   if(any(temp)){
     stop(paste0('Sample ', which(temp), ' has zero total abudance...'))
   }
-
+  ## ensure parameters are put correctly
+  if(lambda.iter < 2){
+    stop('The value of lambda.iter should not be smaller than 2...')
+  }
   ## initialization
   sample.filter.iter <- dat.init$sample.filter
-  tmp <- css(t(dat.tss))$normFactors
+  #tmp <- css(t(dat.tss))$normFactors
+  tmp <- biomassInit(dat.tss)
   if(is.null(m.init)) {
     m.iter <- scaling * tmp/median(tmp)
   }else{
@@ -507,7 +524,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev
   for(iter in 1:max.iter){
     if(verbose) message(paste0("############# Run for iteration ", iter,": #############"))
     if(verbose) message("E-step: estimating scaled parameters...")
-    if(iter>=2) lambda.inits <- lambdas
+    if(iter>=lambda.iter) lambda.inits <- lambdas
     if(is.null(external.perturbation)){
       ext.pert <- NULL
     }else{
@@ -680,6 +697,14 @@ predict_beem <- function(dat.new, beem, dev, ncpu=4, pert.new = NULL){
         as.numeric((Y - (X %*% coefs)[,1] ) )
     }
   }
+  ## predicting the equilibrium based on the current results
+  eq.pred <- foreach(i=1:ncol(dat.new), .combine = cbind) %dopar%{
+      sel <- dat.new[,i]>0 ## species present
+      tmp <- matrix(0, length(sel), 1)
+      tmp[sel] <- - solve(param$b.est[sel,sel]) %*% (param$a.est/m.pred[i])[sel]
+      tmp
+  }
+
   isBad <- detectBadSamples(apply(e^2, 2, median, na.rm = TRUE), dev)
-  return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad))
+  return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad, eq.pred=eq.pred))
 }
