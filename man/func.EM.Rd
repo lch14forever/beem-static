@@ -4,7 +4,7 @@
 \alias{func.EM}
 \title{func.EM}
 \usage{
-func.EM(dat, external.perturbation = NULL, ncpu = 4, scaling = 1000,
+func.EM(dat, external.perturbation = NULL, ncpu = 1, scaling = 1000,
   dev = Inf, m.init = NULL, max.iter = 30, lambda.iter = 2,
   warm.iter = NULL, lambda.choice = 1, resample = 0, alpha = 1,
   refresh.iter = 1, epsilon = 0.001, debug = FALSE, verbose = TRUE)
@@ -14,7 +14,7 @@ func.EM(dat, external.perturbation = NULL, ncpu = 4, scaling = 1000,
 
 \item{external.perturbation}{external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
 
-\item{ncpu}{number of CPUs (default: 4)}
+\item{ncpu}{number of CPUs (default: 1)}
 
 \item{scaling}{a scaling factor to keep the median of all biomass constant (default: 1000)}
 

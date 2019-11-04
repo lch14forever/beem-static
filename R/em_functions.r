@@ -458,7 +458,7 @@ beem2biomass <- function(beem){
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param external.perturbation external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
-##' @param ncpu number of CPUs (default: 4)
+##' @param ncpu number of CPUs (default: 1)
 ##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
 ##' @param m.init initial biomass values (default: use CSS normalization)
@@ -475,7 +475,7 @@ beem2biomass <- function(beem){
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-func.EM <- function(dat, external.perturbation = NULL, ncpu=4, scaling=1000, dev=Inf, m.init=NULL,
+func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev=Inf, m.init=NULL,
                     max.iter=30, lambda.iter=2, warm.iter=NULL, lambda.choice=1, resample=0,
                     alpha=1, refresh.iter=1, epsilon=1e-3,
                     debug=FALSE, verbose=TRUE){
