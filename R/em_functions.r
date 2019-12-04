@@ -51,7 +51,7 @@ biomassInit <- function(m){
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfolds=5,
+infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfolds=3,
                   lambda.init=NULL, lambda.choice=1){
   lambda.lower <- 1e-9
   lambda.upper <- 1
@@ -488,7 +488,12 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
   ## ensure valid samples
   temp <- colSums(dat.tss, na.rm = TRUE) == 0
   if(any(temp)){
-    stop(paste0('Sample ', which(temp), ' has zero total abudance...'))
+    stop(paste0('Sample ', which(temp), ' has zero total abudance...\n'))
+  }
+  ## ensure valid variables
+  temp <- rowSums(dat.tss>0) <= 10
+  if(any(temp)){
+    stop(paste0('Variable ', which(temp), ' has too many low abundance values...\n'))
   }
   ## ensure parameters are put correctly
   if(lambda.iter < 2){
