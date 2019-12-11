@@ -5,7 +5,7 @@
 \title{infer}
 \usage{
 infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
-  alpha = 1, nfolds = 5, lambda.init = NULL, lambda.choice = 1)
+  alpha = 1, nfolds = 3, lambda.init = NULL, lambda.choice = 1)
 }
 \arguments{
 \item{Y}{response}

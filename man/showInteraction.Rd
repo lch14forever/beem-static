@@ -5,7 +5,7 @@
 \title{showInteraction}
 \usage{
 showInteraction(beem.out, dat, layout = "fr", node.text.size = 2,
-  t.strength = 0.001, t.stab = 0.8)
+  t.strength = 0.001, t.stab = 0.8, node.text.repel = TRUE)
 }
 \arguments{
 \item{beem.out}{output of a beem run}
@@ -19,6 +19,8 @@ showInteraction(beem.out, dat, layout = "fr", node.text.size = 2,
 \item{t.strength}{the threshold used to limit the number of interactions (strength)}
 
 \item{t.stab}{the threshold used to limit the number of interactions (stability)}
+
+\item{node.text.repel}{use ggrepel to arrange node labels}
 }
 \description{
 plot the interaction network inferred by beem (using ggraph)

@@ -86,10 +86,11 @@ checkPackage <- function(x){
 ##' @param node.text.size node text size
 ##' @param t.strength the threshold used to limit the number of interactions (strength)
 ##' @param t.stab the threshold used to limit the number of interactions (stability)
+##' @param node.text.repel use ggrepel to arrange node labels
 ##' @description plot the interaction network inferred by beem (using ggraph)
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
-showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2, t.strength=0.001, t.stab=0.8){
+showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2, t.strength=0.001, t.stab=0.8, node.text.repel=TRUE){
     checkPackage("ggraph")
     checkPackage("igraph")
     suppressMessages(require(igraph))
@@ -110,9 +111,9 @@ showInteraction <- function(beem.out, dat, layout='fr', node.text.size=2, t.stre
     ggraph(g.simple, layout = layout)+#, circular=TRUE) +
         geom_edge_arc(aes(col=Type, width=Strength),arrow = arrow(length = unit(2, 'mm')),
                       curvature = 0.1, alpha=0.8,
-                      end_cap=circle(1.5, 'mm'), start_cap=circle(1.5, 'mm')) +
+                      end_cap=circle(3, 'mm'), start_cap=circle(3, 'mm')) +
         geom_node_point(pch=1, aes(size=RelativeAbundance)) +
-        geom_node_text(aes(label = label), size=node.text.size, repel = TRUE) +
+        geom_node_text(aes(label = label), size=node.text.size, repel = node.text.repel, nudge_y = -0.1) +
         scale_edge_width(range = c(0.5,1.5), guide=FALSE) +
         theme_void()
 }
