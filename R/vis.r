@@ -202,7 +202,8 @@ interaction2association <- function(m){
     m.cp <- m
     tmp <- (m[lower.tri(m)] + t(m)[lower.tri(m)])/2
     m.cp[lower.tri(m.cp)] <- tmp
-    m.cp[upper.tri(m.cp)] <- tmp
+    m.cp <- t(m.cp)
+    m.cp[lower.tri(m.cp)] <- tmp
     m.cp
 }
 
