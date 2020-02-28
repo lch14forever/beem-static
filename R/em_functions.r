@@ -571,7 +571,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
       removeIter <- removeIter + 1
     }
     m.fil <- colSums(sample.filter.iter)==0
-    m.iter <- m.iter*scaling/median(m.iter[m.fil], na.rm=TRUE)
+    m.iter <- m.iter*scaling/median(m.iter, na.rm=TRUE)
     trace.m <- cbind(trace.m, m.iter)
     if (!is.null(external.perturbation)) {
       trace.p <- cbind(trace.p, formatOutput(tmp.p$a, tmp.p$b, c = tmp.p$perturbation.coefficients,
