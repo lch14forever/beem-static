@@ -45,15 +45,15 @@ attach(beemDemo)
 
 BEEM-static is run by calling the `func.EM` function.
 
-```{r}
-res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true))
+```{r, message=FALSE}
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200, epsilon = 1e-4)
 ```
 
 #### Visualizing inferred interaction network
 
 We provide a function `showInteraction` to plot the interaction network inferred by BEEM-static (based on the [ggraph](https://github.com/thomasp85/ggraph) package).
 
-```{r}
+```{r fig.height=8, fig.width=8}
 showInteraction(res, dat.w.noise)
 ```
 
@@ -97,13 +97,13 @@ se.stab <- as.matrix(getOptMerge(se))
 est <- beem2param(res)
 ```
 
-We implement a function `auc.b` for ploting the receiver operating characteristic (ROC) curve with computed area under the curve (AUC). We compare the ROC curves of the above three methods.
+We implement a function `auc.b` for ploting the receiver operating characteristic (ROC) curve with computed area under the curve (AUC). We compare the ROC curves of the above three methods. We use `inference` function provided in the pacakge to estimate confidence values (t-statistics) that can be used to rank the predictions.
 
-```{r}
+```{r fig.height=3, fig.width=10}
 par(mfrow=c(1,3))
-auc.b(spearman, scaled.params$b.truth, is.association = TRUE, main='Spearman correlation')
-auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPIEC-EASI')
-auc.b(est$b.est, scaled.params$b.truth, main='BEEM-static')
+auc.b(spearman, scaled.params$b.truth, is.association = TRUE, main='Spearman correlation', print.auc.cex=2)
+auc.b(se.stab, scaled.params$b.truth, is.association = TRUE, main='SPIEC-EASI', print.auc.cex=2)
+auc.b(inference(dat.w.noise, res), scaled.params$b.truth, main='BEEM-static', print.auc.cex=2)
 ```
 
 

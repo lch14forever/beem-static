@@ -10,9 +10,13 @@
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 inference <- function(dat, beem,  ncpu=1){
   ## currently doesn't support perturbation parameters
-  dat.tss <- beemStatic:::tss(dat[, -beem$sample2rm])
   registerDoParallel(ncpu)
-  m <- beem2biomass(beem)[-beem$sample2rm]
+  m <- beem2biomass(beem)
+  dat.tss <- tss(dat)
+  if(length(beem$sample2rm)>0){
+    dat.tss <- dat.tss[, -beem$sample2rm]
+    m <- m[-beem$sample2rm]
+  }
   p <- nrow(dat.tss)
   param <- beem2param(beem)
   res <- foreach(i=1:p, .combine=rbind) %dopar% {
