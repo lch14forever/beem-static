@@ -5,7 +5,8 @@
 \title{infer}
 \usage{
 infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
-  alpha = 1, nfolds = 3, lambda.init = NULL, lambda.choice = 1)
+  alpha = 1, nfolds = 3, lambda.init = NULL, lambda.choice = 1,
+  lambda.adjust.up = TRUE, lambda.adjust.down = TRUE)
 }
 \arguments{
 \item{Y}{response}
@@ -25,6 +26,10 @@ infer(Y, X, method = "glmnet", intercept = FALSE, seed = 0,
 \item{lambda.init}{user provides initial lambda values}
 
 \item{lambda.choice}{1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se}
+
+\item{lambda.adjust.up}{allow adjusting lambda (increase) by 50\% in each iteration}
+
+\item{lambda.adjust.down}{allow adjusting lambda (decrease) by 50\% in each iteration}
 }
 \description{
 Infer parameters with blasso

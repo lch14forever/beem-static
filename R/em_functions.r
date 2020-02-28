@@ -47,12 +47,15 @@ biomassInit <- function(m){
 ##' @param alpha the alpha parameter for elastic net (1:lasso [default], 0:ridge)
 ##' @param lambda.init user provides initial lambda values
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
+##' @param lambda.adjust.up allow adjusting lambda (increase) by 50\% in each iteration
+##' @param lambda.adjust.down allow adjusting lambda (decrease) by 50\% in each iteration
 ##' @param nfolds number of folds for glmnet cross-validation
 ##' @import glmnet
 ##' @description Infer parameters with blasso
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfolds=3,
-                  lambda.init=NULL, lambda.choice=1){
+                  lambda.init=NULL, lambda.choice=1,
+                  lambda.adjust.up=TRUE, lambda.adjust.down=TRUE){
   lambda.lower <- 1e-9
   lambda.upper <- 1
   set.seed(seed)
@@ -76,7 +79,7 @@ infer <- function(Y, X, method='glmnet', intercept=FALSE, seed=0, alpha=1, nfold
       ## adjust lambda by up to 50%
       lambda <- rev(exp(seq(
         max(log(lambda.init/2), log(lambda.lower)), ## bounded by the min lambda
-        min(log(lambda.init*1), log(lambda.upper)), ## bounded by the max lambda
+        min(log(lambda.init*1.5), log(lambda.upper)), ## bounded by the max lambda
         length.out = 20)))
     }
 
@@ -501,8 +504,8 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
   }
   ## initialization
   sample.filter.iter <- dat.init$sample.filter
-  #tmp <- css(t(dat.tss))$normFactors
-  tmp <- biomassInit(dat.tss)
+  tmp <- css(t(dat.tss))$normFactors
+  #tmp <- biomassInit(dat.tss)
   if(is.null(m.init)) {
     m.iter <- scaling * tmp/median(tmp)
   }else{
@@ -662,54 +665,4 @@ resample.EM <- function(data, external.perturbation = NULL, m, perc, res.iter, .
   }
 
   list(res.a = res_p[1:p,], res.b = res_p[-c(1:p),])
-}
-
-
-##' @title predict_beem
-##'
-##' @param dat.new OTU count/relative abundance matrix (each OTU in one row)
-##' @param beem output of the EM algorithm
-##' @param dev deviation of the error (for one sample) from the model to be excluded
-##' @param ncpu number of CPUs (default: 4)
-##' @param pert.new external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
-##' @importFrom doParallel registerDoParallel
-##' @description Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
-##' @export
-##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-predict_beem <- function(dat.new, beem, dev, ncpu=4, pert.new = NULL){
-  ### currently not ready for an S3method yet
-  param <- beem2param(beem)
-  dat.new.tss <- tss(dat.new)
-  if (!is.null(pert.new)){
-    tmp.m <- func.M(dat.new.tss, param$a.est, param$b.est, c = param$c.est, perturbation.presence = pert.new, ncpu = 1)
-  } else {
-    tmp.m <- func.M(dat.new.tss, param$a.est, param$b.est, ncpu=ncpu)
-  }
-  m.pred <- tmp.m[,1]
-  err.m.pred <- tmp.m[,-1]
-
-  registerDoParallel(ncpu)
-  p <- nrow(dat.new.tss)
-  e <- foreach(i=1:p, .combine=rbind) %dopar% {
-    X <- t(rbind(1/m.pred, dat.new.tss[-i,]))
-    Y <- dat.new.tss[i, ]
-    coefs <- c(param$a.est[i], param$b.est[i,-i])
-    if(!is.null(param$c.est)){
-        pert <- t(pert.new)
-        coefs_pert <- param$c.est[i,]
-        as.numeric(Y - (X %*% coefs)[,1] - (1/m.pred) * ((pert %*% coefs_pert)[,1]) )
-    }else{
-        as.numeric((Y - (X %*% coefs)[,1] ) )
-    }
-  }
-  ## predicting the equilibrium based on the current results
-  eq.pred <- foreach(i=1:ncol(dat.new), .combine = cbind) %dopar%{
-      sel <- dat.new[,i]>0 ## species present
-      tmp <- matrix(0, length(sel), 1)
-      tmp[sel] <- - solve(param$b.est[sel,sel]) %*% (param$a.est/m.pred[i])[sel]
-      tmp
-  }
-
-  isBad <- detectBadSamples(apply(e^2, 2, median, na.rm = TRUE), dev)
-  return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad, eq.pred=eq.pred))
 }

@@ -38,7 +38,7 @@ data("beemDemo")
 attach(beemDemo)
 
 
-res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200, epsilon = 1e-4)
+res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200, epsilon = 1e-4, dev = 5)
 
 diagnoseFit(res, dat.w.noise, annotate = FALSE)
 
@@ -53,6 +53,8 @@ showInteraction(res, dat.w.noise)
 par(mfrow=c(1,2))
 plot(est$a.est, scaled.params$a.truth, xlab='BEEM estimation', ylab='Truth', main='Growth rates')
 auc.b(est$b.est, scaled.params$b.truth, main='Interaction matrix')
+
+auc.b(inference(dat.w.noise, res), scaled.params$b.truth)
 
 spearman <- cor(t(dat.w.noise), method='spearman')
 
