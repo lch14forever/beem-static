@@ -4,7 +4,7 @@
 \alias{inference}
 \title{inference}
 \usage{
-inference(dat, beem, ncpu = 1)
+inference(dat, beem, ncpu = 1, p.values = FALSE)
 }
 \arguments{
 \item{dat}{original data used for BEEM-static prediction}
@@ -12,6 +12,8 @@ inference(dat, beem, ncpu = 1)
 \item{beem}{BEEM-static ouput}
 
 \item{ncpu}{number of CPUs (default: 1)}
+
+\item{p.values}{report p-values computed from the confidence scores (default: FALSE)}
 }
 \description{
 Infer confidence based on stepwise variable selection

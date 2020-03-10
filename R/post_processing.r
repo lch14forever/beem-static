@@ -5,10 +5,11 @@
 ##' @param dat original data used for BEEM-static prediction
 ##' @param beem BEEM-static ouput
 ##' @param ncpu number of CPUs (default: 1)
+##' @param p.values report p-values computed from the confidence scores (default: FALSE)
 ##' @description Infer confidence based on stepwise variable selection
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-inference <- function(dat, beem,  ncpu=1){
+inference <- function(dat, beem,  ncpu=1, p.values=FALSE){
   ## currently doesn't support perturbation parameters
   registerDoParallel(ncpu)
   m <- beem2biomass(beem)
@@ -23,20 +24,26 @@ inference <- function(dat, beem,  ncpu=1){
     fil <- dat.tss[i,]!=0 #& !sample.filter[i,]
     X <- t(rbind(1/m, dat.tss[-i,])[,fil])
     Y <- dat.tss[i, fil]
-    pvs <- rep(0, p)
-    pvs[i] <- NA ## -beta_{ii}/beta_{ii}
+    tvs <- rep(0, p)
+    pvs <- rep(1,p)
+    tvs[i] <- NA ## -beta_{ii}/beta_{ii}
+    pvs[i] <- NA
     beta <- c(param$b.est[i,-i])
     if (any(beta!=0)){
-      id.non0 <- colSums(X) != 0
+      id.non0 <- colSums(X!=0) > 1
       fit <- fs(X[, id.non0], Y, intercept = F)
       x <- fsInf(fit,type="aic")
       z <- abs(x$sign * x$vmat %*% x$y/(x$sigma * sqrt(rowSums(x$vmat^2))))[,1]
       ids <- x$vars - 1
-      pvs[-i][id.non0[-1]][ids[ids!=0]] <- z[ids!=0]
+      pvs[-i][id.non0[-1]][ids[ids!=0]] <- x$pv[ids!=0]
+      tvs[-i][id.non0[-1]][ids[ids!=0]] <- z[ids!=0]
     }
-    pvs
+    c(tvs, pvs)
   }
-  res
+  if (!p.values) {
+      return(res[, 1:p])
+  }
+  return(list(conf=res[,1:p], p.value=res[,(p+1):(2*p)]))
 }
 
 ##' @title predict_beem
