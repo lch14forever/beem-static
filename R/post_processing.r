@@ -46,10 +46,10 @@ inference <- function(dat, beem,  ncpu=1, p.values=FALSE){
   return(list(conf=res[,1:p], p.value=res[,(p+1):(2*p)]))
 }
 
-##' @title predict_beem
+##' @title predict.beem
 ##'
 ##' @param dat.new OTU count/relative abundance matrix (each OTU in one row)
-##' @param beem output of the EM algorithm
+##' @param object output of the EM algorithm
 ##' @param dev deviation of the error (for one sample) from the model to be excluded
 ##' @param ncpu number of CPUs (default: 4)
 ##' @param pert.new external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
@@ -57,8 +57,9 @@ inference <- function(dat, beem,  ncpu=1, p.values=FALSE){
 ##' @description Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-predict_beem <- function(dat.new, beem, dev, ncpu=4, pert.new = NULL){
+predict.beem <- function(object, dat.new, dev, ncpu=4, pert.new = NULL){
   ### currently not ready for an S3method yet
+  beem <- object
   param <- beem2param(beem)
   dat.new.tss <- tss(dat.new)
   if (!is.null(pert.new)){
@@ -90,7 +91,22 @@ predict_beem <- function(dat.new, beem, dev, ncpu=4, pert.new = NULL){
     tmp[sel] <- - solve(param$b.est[sel,sel]) %*% (param$a.est/m.pred[i])[sel]
     tmp
   }
-
-  isBad <- detectBadSamples(apply(e^2, 2, median, na.rm = TRUE), dev)
+  tmp.err <- apply(abs(beem$err.p)/tss(beem$dat), 2, median, na.rm=TRUE)
+  score <- (abs(e)/dat.new.tss - median(tmp.err, na.rm = TRUE))/IQR(tmp.err, na.rm = TRUE)
+  score[is.na(score)] <- Inf
+  isBad <- score > dev
   return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad, eq.pred=eq.pred))
+}
+
+##' @title print.beem
+##'
+##' @param object output of the EM algorithm
+##' @description print method for beem object
+##' @export
+##' @author Chenhao Li
+print.beem <- function(object){
+    cat("\nEM-call: \n")
+    print(object$call)
+    cat("\n\n")
+    invisible(object)
 }
