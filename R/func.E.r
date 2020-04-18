@@ -7,13 +7,12 @@
 ##' @param lambda.inits initial lambda values
 ##' @param m estimated biomass values (1 X no. of samples) matrix
 ##' @param ncpu number of CPUs (default: 4)
-##' @param center center data or not
 ##' @param ... additional parameters for `beemStatic::infer`
 ##' @importFrom doParallel registerDoParallel
 ##' @import foreach
 ##' @description E-part of BEEM, estimate model parameters with inferred m
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lambda.inits=NULL, ncpu=4, center=FALSE, ...){
+func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lambda.inits=NULL, ncpu=4, ...){
     ## infer parameter for each OTU
     registerDoParallel(ncpu)
     p <- nrow(dat.tss)
@@ -24,10 +23,7 @@ func.E <- function(dat.tss, external.perturbation = NULL, m, sample.filter, lamb
         fil <- dat.tss[i,]!=0 & !sample.filter[i,]
         X <- t(rbind(1/m, dat.tss[-i,])[,fil])
         Y <- dat.tss[i, fil]
-        if(center){
-            Y <- Y-mean(Y)
-            X <- X-rowMeans(X)
-        }
+
         theta <- rep(0, p+1)
         theta[i+1] <- -1 ## -beta_{ii}/beta_{ii}
         if (!is.null(external.perturbation)) {
