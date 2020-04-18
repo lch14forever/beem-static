@@ -118,7 +118,9 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
             if (iter %% refresh.iter == 0 ) {
                 sample.filter.iter <- dat.init$sample.filter
             }
-            bad.samples <- detectBadSamples(apply(abs(err.p)/dat.tss, 2, median, na.rm = TRUE), dev)
+            bad.samples <- detectBadSamples(apply(abs(t(err.p/dat.tss))/m.iter, 1, median, na.rm=TRUE), dev)
+            #plot(apply(abs(t(err.p/dat.tss))/m.iter, 1, median, na.rm=TRUE), col=ifelse(bad.samples, 'red', 'black'))
+            #bad.samples <- detectBadSamples(apply(abs(err.p)/dat.tss, 2, median, na.rm = TRUE), dev)
             sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter
             if(verbose) message(paste0("Number of samples removed (detected to be non-static): ",
                                        sum(colSums(sample.filter.iter)>0)))

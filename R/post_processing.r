@@ -51,13 +51,15 @@ inference <- function(dat, beem,  ncpu=1, p.values=FALSE){
 ##' @param dat.new OTU count/relative abundance matrix (each OTU in one row)
 ##' @param object output of the EM algorithm
 ##' @param dev deviation of the error (for one sample) from the model to be excluded
-##' @param ncpu number of CPUs (default: 4)
+##' @param ncpu number of CPUs (default: 1)
 ##' @param pert.new external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @importFrom doParallel registerDoParallel
 ##' @description Use a trained BEEM-static model to predict biomass, deviation from steady states and violation of model assumption
+##' @rdname predict
+##' @export predict.beem
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-predict.beem <- function(object, dat.new, dev, ncpu=4, pert.new = NULL){
+predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
   ### currently not ready for an S3method yet
   beem <- object
   param <- beem2param(beem)
@@ -102,6 +104,8 @@ predict.beem <- function(object, dat.new, dev, ncpu=4, pert.new = NULL){
 ##'
 ##' @param object output of the EM algorithm
 ##' @description print method for beem object
+##' @rdname print
+##' @export print.beem
 ##' @export
 ##' @author Chenhao Li
 print.beem <- function(object){

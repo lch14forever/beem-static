@@ -6,7 +6,7 @@
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 preProcess <- function(dat, dev=0){
     ## filter out species abundances that are too low
-    detection_limit <- 1e-4
+    detection_limit <- 1e-5
     dat <- tss(dat)
     dat[dat<detection_limit] <- 0
     ##rowMed <- apply(dat, 1, function(x) median(x[x!=0]))

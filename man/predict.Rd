@@ -4,7 +4,7 @@
 \alias{predict.beem}
 \title{predict.beem}
 \usage{
-\method{predict}{beem}(object, dat.new, dev, ncpu = 4, pert.new = NULL)
+\method{predict}{beem}(object, dat.new, dev, ncpu = 1, pert.new = NULL)
 }
 \arguments{
 \item{object}{output of the EM algorithm}
@@ -13,7 +13,7 @@
 
 \item{dev}{deviation of the error (for one sample) from the model to be excluded}
 
-\item{ncpu}{number of CPUs (default: 4)}
+\item{ncpu}{number of CPUs (default: 1)}
 
 \item{pert.new}{external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)}
 }
