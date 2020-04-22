@@ -4,7 +4,7 @@
 ##' @param threshold threshold to filter out samples
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 detectBadSamples <- function(err, threshold){
-    score <- (err - median(err, na.rm = TRUE))/IQR(err, na.rm = TRUE)
+    score <- (err - median(err, na.rm = TRUE))/median(err, na.rm = TRUE)
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
@@ -33,7 +33,7 @@ detectBadSamples <- function(err, threshold){
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev=Inf, m.init=NULL,
                     max.iter=30, lambda.iter=2, warm.iter=NULL, lambda.choice=1, resample=0,
-                    alpha=1, refresh.iter=1, epsilon=1e-3,
+                    alpha=1, refresh.iter=5, epsilon=1e-3,
                     debug=FALSE, verbose=TRUE){
 
     cl <- match.call()
@@ -118,7 +118,8 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
             if (iter %% refresh.iter == 0 ) {
                 sample.filter.iter <- dat.init$sample.filter
             }
-            bad.samples <- detectBadSamples(apply(abs(t(err.p/dat.tss))/m.iter, 1, median, na.rm=TRUE), dev)
+            err.tmp <- abs(tss(predict_eq(dat.tss, tmp.p$a, tmp.p$b, m.iter)) - dat.tss)/(dat.tss)
+            bad.samples <- detectBadSamples(apply(abs(err.tmp), 2, median, na.rm=TRUE), dev)
             #plot(apply(abs(t(err.p/dat.tss))/m.iter, 1, median, na.rm=TRUE), col=ifelse(bad.samples, 'red', 'black'))
             #bad.samples <- detectBadSamples(apply(abs(err.p)/dat.tss, 2, median, na.rm = TRUE), dev)
             sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter

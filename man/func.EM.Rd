@@ -7,7 +7,7 @@
 func.EM(dat, external.perturbation = NULL, ncpu = 1, scaling = 1000,
   dev = Inf, m.init = NULL, max.iter = 30, lambda.iter = 2,
   warm.iter = NULL, lambda.choice = 1, resample = 0, alpha = 1,
-  refresh.iter = 1, epsilon = 0.001, debug = FALSE, verbose = TRUE)
+  refresh.iter = 5, epsilon = 0.001, debug = FALSE, verbose = TRUE)
 }
 \arguments{
 \item{dat}{OTU count/relative abundance matrix (each OTU in one row)}

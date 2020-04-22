@@ -93,12 +93,34 @@ predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
     tmp[sel] <- - solve(param$b.est[sel,sel]) %*% (param$a.est/m.pred[i])[sel]
     tmp
   }
-  tmp.err <- apply(abs(beem$err.p)/tss(beem$dat), 2, median, na.rm=TRUE)
+  tmp.err <- apply(abs(beem$err.p)/tss(beem$input), 2, median, na.rm=TRUE)
   score <- (abs(e)/dat.new.tss - median(tmp.err, na.rm = TRUE))/IQR(tmp.err, na.rm = TRUE)
   score[is.na(score)] <- Inf
   isBad <- score > dev
   return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad, eq.pred=eq.pred))
 }
+
+##' @title predict_eq
+##'
+##' @param dat OTU count/relative abundance matrix (each OTU in one row)
+##' @param a a values
+##' @param b b values
+##' @param m biomass
+##' @param ncpu number of CPUs (default: 1)
+##' @importFrom doParallel registerDoParallel
+##' @description predict the expected equilibria for a dataset
+##' @author Chenhao Li
+predict_eq <- function(dat, a, b, m, ncpu=1){
+    registerDoParallel(ncpu)
+    eq.pred <- foreach(i=1:ncol(dat), .combine = cbind) %dopar%{
+        sel <- dat[,i]>0 ## species present
+        tmp <- matrix(0, length(sel), 1)
+        tmp[sel] <- - solve(b[sel,sel]) %*% (a/m[i])[sel]
+        tmp
+    }
+    eq.pred
+}
+
 
 ##' @title print.beem
 ##'

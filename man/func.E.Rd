@@ -5,7 +5,7 @@
 \title{func.E}
 \usage{
 func.E(dat.tss, external.perturbation = NULL, m, sample.filter,
-  lambda.inits = NULL, ncpu = 4, center = FALSE, ...)
+  lambda.inits = NULL, ncpu = 4, ...)
 }
 \arguments{
 \item{dat.tss}{relative abundances matrix (each OTU in one row)}
@@ -19,8 +19,6 @@ func.E(dat.tss, external.perturbation = NULL, m, sample.filter,
 \item{lambda.inits}{initial lambda values}
 
 \item{ncpu}{number of CPUs (default: 4)}
-
-\item{center}{center data or not}
 
 \item{...}{additional parameters for `beemStatic::infer`}
 }
