@@ -142,7 +142,7 @@ se <- spiec.easi(t(dat.w.noise), method='mb')
 se.stab <- as.matrix(getOptMerge(se))
 ```
 
-3.  Using BEEM-static
+3.  Using BEEM-Static
 
 <!-- end list -->
 
@@ -167,7 +167,7 @@ auc.b(inference(dat.w.noise, res), scaled.params$b.truth, main='BEEM-static', pr
 
 ## Citation
 
-A manuscript for BEEM-static is in preparation and please contact us
+A manuscript for BEEM-Static is in preparation and please contact us
 ([Li Chenhao](mailto:lich@gis.a-star.edu.sg) or [Niranjan
 Nagarajan](mailto:nagarajann@gis.a-star.edu.sg)) if you are interested
 in using it. Alternatively, you can also cite our manuscript on BEEM:
