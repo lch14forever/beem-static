@@ -1,4 +1,4 @@
-# BEEM-static
+# BEEM-Static
 
   - Authors: Chenhao Li, Niranjan Nagarajan
 
