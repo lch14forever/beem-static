@@ -7,7 +7,7 @@
 detectBadSamples(err, threshold)
 }
 \arguments{
-\item{err}{the errors estimated from regression}
+\item{err}{the errors defined in `func.EM`}
 
 \item{threshold}{threshold to filter out samples}
 }

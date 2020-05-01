@@ -1,10 +1,10 @@
 ##' @title detectBadSamples
 ##'
-##' @param err the errors estimated from regression
+##' @param err the errors defined in `func.EM`
 ##' @param threshold threshold to filter out samples
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 detectBadSamples <- function(err, threshold){
-    score <- (err - median(err, na.rm = TRUE))/median(err, na.rm = TRUE)
+    score <- err ## (err - median(err, na.rm = TRUE))/median(err, na.rm = TRUE)
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
