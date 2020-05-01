@@ -169,13 +169,15 @@ cluster <- function(countData){
 
 ##' @title auc.b
 ##'
-##' @param b.est The estimated interaction network (This can be a correlation matrix and the edges will be ranked based on the absolute value of the correlation coefficents)
-##' @param b.true The true interaction network
-##' @param is.association b.est is an association structure
+##' @param b.est the estimated interaction network (This can be a correlation matrix and the edges will be ranked based on the absolute value of the correlation coefficents)
+##' @param b.true the true interaction network
+##' @param is.association `b.est` is an association structure
+##' @param show plot ROC curve. If set to `FALSE`, this will return the AUC value.
+##' @param ... additional arguments for `pROC::plot.roc`
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @description plot ROC curve with AUC for the interaction graph (interaction signs are ignored)
 ##' @export
-auc.b <- function(b.est, b.true, is.association=FALSE, ...){
+auc.b <- function(b.est, b.true, is.association=FALSE, show=TRUE, ...){
     checkPackage("pROC")
     diag(b.est) <- NA
     diag(b.true) <- NA
@@ -190,7 +192,12 @@ auc.b <- function(b.est, b.true, is.association=FALSE, ...){
     est <- abs(est[!is.na(est)])
     lab <- lab[!is.na(lab)]
     lab <- (lab!=0 ) *1
-    pROC::plot.roc(lab,est, print.auc = TRUE, ...)
+    if(show){
+        pROC::plot.roc(lab,est, print.auc = TRUE, ...)
+    }
+    else{
+        pROC::auc(lab, est)
+    }
 }
 
 ##' @title interaction2association

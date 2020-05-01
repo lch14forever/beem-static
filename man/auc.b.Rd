@@ -4,14 +4,18 @@
 \alias{auc.b}
 \title{auc.b}
 \usage{
-auc.b(b.est, b.true, is.association = FALSE, ...)
+auc.b(b.est, b.true, is.association = FALSE, show = FALSE, ...)
 }
 \arguments{
-\item{b.est}{The estimated interaction network (This can be a correlation matrix and the edges will be ranked based on the absolute value of the correlation coefficents)}
+\item{b.est}{the estimated interaction network (This can be a correlation matrix and the edges will be ranked based on the absolute value of the correlation coefficents)}
 
-\item{b.true}{The true interaction network}
+\item{b.true}{the true interaction network}
 
-\item{is.association}{b.est is an association structure}
+\item{is.association}{`b.est` is an association structure}
+
+\item{show}{plot ROC curve. If set to `FALSE`, this will return the AUC value.}
+
+\item{...}{additional arguments for `pROC::plot.roc`}
 }
 \description{
 plot ROC curve with AUC for the interaction graph (interaction signs are ignored)
