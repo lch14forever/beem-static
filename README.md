@@ -1,4 +1,4 @@
-# BEEM-static
+# BEEM-Static
 
   - Authors: Chenhao Li, Niranjan Nagarajan
 
@@ -6,15 +6,15 @@
 
 <img src="logo.png" height="200" align="right" />
 
-BEEM-static is an R package for learning **directed microbial
+BEEM-Static is an R package for learning **directed microbial
 interactions** from cross-sectional microbiome profiling data based on
 the generalized Lotka-Volterra model (gLVM). Extending the core idea of
 the original BEEM algorithm for longitudinal data
 ([Reference](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-019-0729-z),
-[Source code](https://github.com/CSB5/BEEM)), BEEM-static directly works
+[Source code](https://github.com/CSB5/BEEM)), BEEM-Static directly works
 with **relative abundances** to jointly estimate **total biomass** and
 **gLVM parameters**, thus eliminating the need for experimentally
-quantifying absolute abundances. BEEM-static identifies microbiomes that
+quantifying absolute abundances. BEEM-Static identifies microbiomes that
 are not at equilibrium states and automatically excludes such samples
 from the analysis. The package also provides the user with a collection
 of utility functions for visualizing and diagnosing the fitted model.
@@ -25,7 +25,7 @@ commit ID for reproducibility.
 ## Installation
 
 ``` r
-devtools::install_github('lch14forever/BEEM-static')
+devtools::install_github('lch14forever/beem-static')
 ```
 
 ## Example usage
@@ -46,9 +46,9 @@ attach(beemDemo)
 ## Use `?beemDemo` to see the help of the fields in this dataset
 ```
 
-### Analysis with BEEM-static
+### Analysis with BEEM-Static
 
-BEEM-static is run by calling the `func.EM`
+BEEM-Static is run by calling the `func.EM`
 function.
 
 ``` r
@@ -58,7 +58,7 @@ res <- func.EM(dat.w.noise, ncpu=4, scaling=median(biomass.true), max.iter=200, 
 #### Visualizing inferred interaction network
 
 We provide a function `showInteraction` to plot the interaction network
-inferred by BEEM-static (based on the
+inferred by BEEM-Static (based on the
 [ggraph](https://github.com/thomasp85/ggraph) package).
 
 ``` r
@@ -71,7 +71,7 @@ showInteraction(res, dat.w.noise)
 
 #### Estimating biomass
 
-BEEM-static also estimates the biomass for each sample (retrieved by the
+BEEM-Static also estimates the biomass for each sample (retrieved by the
 `beem2biomass` function). Here we can compare the estimated biomass with
 the true biomass on this simulated
 dataset.
@@ -142,7 +142,7 @@ se <- spiec.easi(t(dat.w.noise), method='mb')
 se.stab <- as.matrix(getOptMerge(se))
 ```
 
-3.  Using BEEM-static
+3.  Using BEEM-Static
 
 <!-- end list -->
 
@@ -167,7 +167,7 @@ auc.b(inference(dat.w.noise, res), scaled.params$b.truth, main='BEEM-static', pr
 
 ## Citation
 
-A manuscript for BEEM-static is in preparation and please contact us
+A manuscript for BEEM-Static is in preparation and please contact us
 ([Li Chenhao](mailto:lich@gis.a-star.edu.sg) or [Niranjan
 Nagarajan](mailto:nagarajann@gis.a-star.edu.sg)) if you are interested
 in using it. Alternatively, you can also cite our manuscript on BEEM:
