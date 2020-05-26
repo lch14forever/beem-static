@@ -19,7 +19,7 @@ detectBadSamples <- function(err, threshold){
 ##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
 ##' @param m.init initial biomass values (default: use CSS normalization)
 ##' @param max.iter maximal number of iterations (default 30)
-##' @param lambda.iter number of iterations to run before fixing lambda (default: 2)
+##' @param lambda.iter number of iterations to run before fixing lambda (default: Inf)
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
 ##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
 ##' @param resample number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)
@@ -32,7 +32,7 @@ detectBadSamples <- function(err, threshold){
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev=Inf, m.init=NULL,
-                    max.iter=30, lambda.iter=2, warm.iter=NULL, lambda.choice=1, resample=0,
+                    max.iter=30, lambda.iter=Inf, warm.iter=NULL, lambda.choice=1, resample=0,
                     alpha=1, refresh.iter=5, epsilon=1e-3,
                     debug=FALSE, verbose=TRUE){
 
@@ -120,9 +120,16 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
             }
             err.tmp <- abs(tss(predict_eq(dat.tss, tmp.p$a, tmp.p$b, m.iter)) - dat.tss)/(dat.tss)
             bad.samples <- detectBadSamples(apply(abs(err.tmp), 2, median, na.rm=TRUE), dev)
-            #plot(apply(abs(t(err.p/dat.tss))/m.iter, 1, median, na.rm=TRUE), col=ifelse(bad.samples, 'red', 'black'))
-            #bad.samples <- detectBadSamples(apply(abs(err.p)/dat.tss, 2, median, na.rm = TRUE), dev)
-            sample.filter.iter <- (m1 %*% bad.samples)>0  | sample.filter.iter
+            err.tmp <- apply(abs(err.p), 2, median, na.rm = TRUE)
+            # bad.samples2 <- (err.tmp - median(err.tmp, na.rm = TRUE))/median(err.tmp, na.rm = TRUE)
+            # bad.samples2[is.na(bad.samples2)] <- Inf
+            # bad.samples2 <- bad.samples2>3
+            # plot((err.tmp - median(err.tmp, na.rm = TRUE))/median(err.tmp, na.rm = TRUE),
+            #      col=ifelse(bad.samples2, 'red', 'black'))
+
+            sample.filter.iter <- (m1 %*% bad.samples)>0 |
+                # (m1 %*% bad.samples2)>0  |
+                sample.filter.iter
             if(verbose) message(paste0("Number of samples removed (detected to be non-static): ",
                                        sum(colSums(sample.filter.iter)>0)))
             removeIter <- removeIter + 1

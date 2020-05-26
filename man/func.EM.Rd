@@ -5,7 +5,7 @@
 \title{func.EM}
 \usage{
 func.EM(dat, external.perturbation = NULL, ncpu = 1, scaling = 1000,
-  dev = Inf, m.init = NULL, max.iter = 30, lambda.iter = 2,
+  dev = Inf, m.init = NULL, max.iter = 30, lambda.iter = Inf,
   warm.iter = NULL, lambda.choice = 1, resample = 0, alpha = 1,
   refresh.iter = 5, epsilon = 0.001, debug = FALSE, verbose = TRUE)
 }
@@ -24,7 +24,7 @@ func.EM(dat, external.perturbation = NULL, ncpu = 1, scaling = 1000,
 
 \item{max.iter}{maximal number of iterations (default 30)}
 
-\item{lambda.iter}{number of iterations to run before fixing lambda (default: 2)}
+\item{lambda.iter}{number of iterations to run before fixing lambda (default: Inf)}
 
 \item{warm.iter}{number of iterations to run before removing any samples (default: run until convergence and start to remove samples)}
 

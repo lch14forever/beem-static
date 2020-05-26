@@ -4,7 +4,7 @@
 \alias{auc.b}
 \title{auc.b}
 \usage{
-auc.b(b.est, b.true, is.association = FALSE, show = FALSE, ...)
+auc.b(b.est, b.true, is.association = FALSE, show = TRUE, ...)
 }
 \arguments{
 \item{b.est}{the estimated interaction network (This can be a correlation matrix and the edges will be ranked based on the absolute value of the correlation coefficents)}
