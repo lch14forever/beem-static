@@ -5,7 +5,7 @@
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 beem2param <- function(beem){
-    p <- ncol(beem$err.m) #Number of species
+    p <- nrow(beem$input) #Number of species
     num.perturb <- (nrow(beem$trace.p) - p - p*p)/p
     tmp <- beem$trace.p[, ncol(beem$trace.p)]
     a.est <- tmp[1:p]

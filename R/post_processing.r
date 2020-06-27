@@ -60,7 +60,7 @@ inference <- function(dat, beem,  ncpu=1, p.values=FALSE){
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
-  ### currently not ready for an S3method yet
+  ## TODO: the filter part need to be fixed
   beem <- object
   param <- beem2param(beem)
   dat.new.tss <- tss(dat.new)
@@ -74,6 +74,7 @@ predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
 
   registerDoParallel(ncpu)
   p <- nrow(dat.new.tss)
+  ## TODO: replace with predict_err
   e <- foreach(i=1:p, .combine=rbind) %dopar% {
     X <- t(rbind(1/m.pred, dat.new.tss[-i,]))
     Y <- dat.new.tss[i, ]
@@ -87,6 +88,7 @@ predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
     }
   }
   ## predicting the equilibrium based on the current results
+  ## TODO: replace with predict_eq
   eq.pred <- foreach(i=1:ncol(dat.new), .combine = cbind) %dopar%{
     sel <- dat.new[,i]>0 ## species present
     tmp <- matrix(0, length(sel), 1)
@@ -100,6 +102,29 @@ predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
   return(list(biomass.pred=m.pred, dev.from.eq=t(err.m.pred), isBad=isBad, eq.pred=eq.pred))
 }
 
+##' @title predict_err
+##'
+##' @param dat OTU count/relative abundance matrix (each OTU in one row)
+##' @param a a values
+##' @param b b values
+##' @param m biomass
+##' @param ncpu number of CPUs (default: 1)
+##' @importFrom doParallel registerDoParallel
+##' @description calculate regression fitting error
+##' @author Chenhao Li
+predict_err <- function(dat, a, b, m, ncpu=1){
+    registerDoParallel(ncpu)
+    if (length(dat) == 0) return(NULL)
+    e <- foreach(i=1:nrow(dat), .combine=rbind) %dopar% {
+        X <- t(rbind(1/m, dat[-i,]))
+        Y <- dat[i, ]
+        coefs <- c(a[i], b[i,-i])
+        as.numeric((Y - (X %*% coefs)[,1] ) )
+    }
+    e[dat==0] <- NA
+    e
+}
+
 ##' @title predict_eq
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
@@ -108,7 +133,7 @@ predict.beem <- function(object, dat.new, dev, ncpu=1, pert.new = NULL){
 ##' @param m biomass
 ##' @param ncpu number of CPUs (default: 1)
 ##' @importFrom doParallel registerDoParallel
-##' @description predict the expected equilibria for a dataset
+##' @description predict the expected equilibria (relative abunances) for a dataset
 ##' @author Chenhao Li
 predict_eq <- function(dat, a, b, m, ncpu=1){
     registerDoParallel(ncpu)

@@ -1,40 +1,57 @@
-##' @title detectBadSamples
+##' @title detectNonEqSamples
 ##'
 ##' @param err the errors defined in `func.EM`
 ##' @param threshold threshold to filter out samples
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-detectBadSamples <- function(err, threshold){
+detectNonEqSamples <- function(err, threshold){
     score <- err ## (err - median(err, na.rm = TRUE))/median(err, na.rm = TRUE)
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
 
+##' @title detectDiffModSamples
+##'
+##' @param err the errors defined in `func.EM`
+##' @param threshold threshold to filter out samples
+##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
+##'
+detectDiffModSamples <- function(err, threshold){
+    med <- median(err, na.rm = TRUE)
+    dev <- mad(err, na.rm = TRUE)
+    score <- abs(err - 0)/dev
+    score[is.na(score)] <- Inf
+    return(score > threshold)
+}
 
 ##' @title func.EM
 ##'
 ##' @param dat OTU count/relative abundance matrix (each OTU in one row)
 ##' @param external.perturbation external perturbation presence matrix (each perturbation in one row, each sample in one column) (Default: NULL)
 ##' @param ncpu number of CPUs (default: 1)
-##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
-##' @param dev deviation of the error (for one sample) from the model to be excluded (default: Inf - all the samples will be considered)
 ##' @param m.init initial biomass values (default: use CSS normalization)
+##' @param scaling a scaling factor to keep the median of all biomass constant (default: 1000)
+##' @param equil.filter threshold for detecting and removing samples not at equilibrium (default: Inf - all the samples will be considered)
+##' @param model.filter threshold for detecting and removing samples from different models (default: Inf - all the samples will be considered)
 ##' @param max.iter maximal number of iterations (default 30)
+##' @param epsilon convergence threshold (in relative difference): uqn of the relative error in biomass changes (default 1e-3)
 ##' @param lambda.iter number of iterations to run before fixing lambda (default: Inf)
 ##' @param warm.iter number of iterations to run before removing any samples (default: run until convergence and start to remove samples)
-##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
-##' @param resample number of iterations to resample the data to compute stability of the interaction parameters (default: 0 - no resampling)
-##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @param refresh.iter refresh the removed samples every X iterations (default: 1)
-##' @param epsilon convergence threshold (in relative difference): uqn of the relative error in biomass changes (default 1e-3)
-##' @param verbose print out messages
+##' @param lambda.choice 1: use lambda.1se for LASSO, 2: use lambda.min for LASSO, a number between (0, 1): this will select a lambda according to (1-lambda.choice)*lambda.min + lambda.choice*lambda.1se
+##' @param alpha the alpha parameter for the Elastic Net model (1-LASSO [default], 0-RIDGE)
 ##' @param debug output debugging information (default FALSE)
+##' @param verbose print out messages
 ##' @description Iteratively estimating scaled parameters and biomass
 ##' @export
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
-func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev=Inf, m.init=NULL,
-                    max.iter=30, lambda.iter=Inf, warm.iter=NULL, lambda.choice=1, resample=0,
-                    alpha=1, refresh.iter=5, epsilon=1e-3,
-                    debug=FALSE, verbose=TRUE){
+func.EM <- function(dat, external.perturbation = NULL, ncpu=1,
+                    m.init=NULL, scaling=1000,
+                    equil.filter=Inf, model.filter=Inf, ## filters
+                    refresh.iter=1, lambda.iter=Inf, warm.iter=NULL, ## filtering control
+                    max.iter=30, epsilon=1e-3,  ## termination control
+                    lambda.choice=1, alpha=1,   ## Lasso regression control
+                    debug=FALSE, verbose=TRUE   ## logging control
+                    ){
 
     cl <- match.call()
     ## pre-processing
@@ -56,6 +73,14 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
     if(lambda.iter < 2){
         stop('The value of lambda.iter should not be smaller than 2...')
     }
+    # if(is.finite(model.filter)){
+    #     message("Setting lambda.iter to 10")
+    #     lambda.iter = 10 ## cannot varry lambda through the iterations
+    # }
+    # if(is.finite(model.filter) && is.finite(equil.filter)){
+    #     stop('We don\'t recommend using both filters...
+    #          Consider using equi.filter then model.filter on kept samples.')
+    # }
     ## initialization
     sample.filter.iter <- dat.init$sample.filter
     tmp <- css(t(dat.tss))$normFactors
@@ -70,7 +95,8 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
     trace.p <- c(paste0(NA, '->',spNames), trace.p)
     if (!is.null(external.perturbation)) {
         external.perturbation.Names <- rownames(external.perturbation)
-        trace.p.external.perturbation <- apply(expand.grid(spNames, external.perturbation.Names), 1, function(x) paste0(x[2], '->', x[1]))
+        trace.p.external.perturbation <- apply(expand.grid(spNames, external.perturbation.Names),
+                                               1, function(x) paste0(x[2], '->', x[1]))
         trace.p <- append(trace.p, trace.p.external.perturbation)
     }
     trace.p <- data.frame(name=trace.p)
@@ -110,27 +136,33 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
         } else {
             tmp.m <- func.M(dat.tss, tmp.p$a, tmp.p$b, c = NULL, perturbation.presence = NULL, ncpu)
         }
+
+        ## fill in errors
+        err.p[,colSums(sample.filter.iter)>0] <- predict_err(dat.tss[,colSums(sample.filter.iter)>0],
+                                                             tmp.p$a, tmp.p$b, m.iter, ncpu)
+
         m.iter <- tmp.m[,1]
-        err.m <- tmp.m[,-1]
+        err.m <- t(tmp.m[,-1])#/dat.tss
+        err.m[err.m==0] <- NA
 
         if(remove_non_eq){
             ## clear up removed samples every X iterations
-            if (iter %% refresh.iter == 0 ) {
+            if ((iter-1) %% refresh.iter == 0) {
                 sample.filter.iter <- dat.init$sample.filter
             }
-            err.tmp <- abs(tss(predict_eq(dat.tss, tmp.p$a, tmp.p$b, m.iter)) - dat.tss)/(dat.tss)
-            bad.samples <- detectBadSamples(apply(abs(err.tmp), 2, median, na.rm=TRUE), dev)
-            err.tmp <- apply(abs(err.p), 2, median, na.rm = TRUE)
-            # bad.samples2 <- (err.tmp - median(err.tmp, na.rm = TRUE))/median(err.tmp, na.rm = TRUE)
-            # bad.samples2[is.na(bad.samples2)] <- Inf
-            # bad.samples2 <- bad.samples2>3
-            # plot((err.tmp - median(err.tmp, na.rm = TRUE))/median(err.tmp, na.rm = TRUE),
-            #      col=ifelse(bad.samples2, 'red', 'black'))
+            predicted_eq <- predict_eq(dat.tss, tmp.p$a, tmp.p$b, m.iter)
+            err.tmp <- abs(predicted_eq - dat.tss) /dat.tss
+            nonEq.samples <- detectNonEqSamples(apply(err.tmp, 2, median, na.rm=T), equil.filter)
 
-            sample.filter.iter <- (m1 %*% bad.samples)>0 |
-                # (m1 %*% bad.samples2)>0  |
+            err.tmp <- apply((err.p)^2, 2, median, na.rm = TRUE)
+            #med <- 0 #mean(err.tmp[!sample.filter.iter], na.rm=TRUE)
+            #dev <- mad(err.tmp[!sample.filter.iter], na.rm=TRUE)
+            diffMod.samples <- detectDiffModSamples(err.tmp, model.filter)
+
+            sample.filter.iter <- (m1 %*% nonEq.samples)>0 |
+                (m1 %*% diffMod.samples)>0 |
                 sample.filter.iter
-            if(verbose) message(paste0("Number of samples removed (detected to be non-static): ",
+            if(verbose) message(paste0("Number of samples removed: ",
                                        sum(colSums(sample.filter.iter)>0)))
             removeIter <- removeIter + 1
         }
@@ -145,54 +177,36 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1, scaling=1000, dev
         }
 
         trace.lambda <- cbind(trace.lambda, lambdas)
-        summary.m <- apply(trace.m[m.fil, ], 1, function(x) median(rev(x)[1:min(5,length(x))]))
-        #criterion <- quantile(abs((trace.m[m.fil, iter+1] - summary.m)/summary.m), 1)<epsilon
         criterion <- median(abs((trace.m[m.fil, iter+1] - trace.m[m.fil, iter])/trace.m[m.fil, iter]))<epsilon #0.0025
 
         if (!is.null(warm.iter) && iter > warm.iter && !remove_non_eq){
             if(verbose) message("Start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
-        if (iter > 5 && !remove_non_eq && criterion && is.finite(dev)) {
+        if (iter > 5 && !remove_non_eq && criterion &&
+            (is.finite(equil.filter) || is.finite(model.filter) ) ) {
             if(verbose) message("Converged and start to detect and remove bad samples...")
             remove_non_eq <- TRUE
         }
-        if (((removeIter > 5 && remove_non_eq) || is.infinite(dev)) && criterion) {
+        if (((removeIter > 5 && remove_non_eq) ||
+             (is.finite(equil.filter) || is.finite(model.filter)  ) ) &&
+            criterion) {
             if(verbose) message("Converged!")
             break
         }
     }
-    res.resample <- NULL
 
-    if(resample!=0){
-        if(verbose) message("Estimating stability...")
-        ##res.resample <- func.E.stab(dat.tss, m.iter, sample.filter.iter, ncpu=ncpu, alpha=alpha)
-        if (!is.null(external.perturbation)) {
-            res.resample <- resample.EM(dat[, m.fil], external.perturbation = external.perturbation[, m.fil], m=m.iter[m.fil],
-                                        perc=0.6, res.iter=resample,
-                                        ncpu=ncpu, scaling=scaling, dev=dev, refresh.iter=refresh.iter, alpha=alpha,
-                                        max.iter=20, warm.iter=0, resample=0, debug=FALSE, verbose=FALSE)
-        } else {
-            res.resample <- resample.EM(dat[, m.fil], external.perturbation = NULL, m=m.iter[m.fil],
-                                        perc=0.6, res.iter=resample,
-                                        ncpu=ncpu, scaling=scaling, dev=dev, refresh.iter=refresh.iter, alpha=alpha,
-                                        max.iter=20, warm.iter=0, resample=0, debug=FALSE, verbose=FALSE)
-        }
-        res.resample$a.summary <- apply(res.resample$res.a, 1, median)
-        res.resample$b.summary <- matrix(apply(res.resample$res.b, 1, function(x) median(x)), nrow(dat))
-        res.resample$b.stab <- matrix(rowSums(res.resample$res.b != 0)/ncol(res.resample$res.a), nrow(dat))
-        if (!is.null(external.perturbation)) {
-            res.resample$c.summary <- apply(res.resample$res.c, 1, function(x) median(x))
-            res.resample$c.stab <- matrix(rowSums(res.resample$res.c != 0)/ncol(res.resample$res.a), nrow(dat))
-        }
-    }
+    # resample code removed
+    ## retrieve from commit: https://github.com/lch14forever/beem-static/commit/67e87915d5b1207a83b8e2bc88a01c96070af1e5
     structure(
         list(trace.m=trace.m, trace.p=trace.p, trace.lambda=trace.lambda,
              err.m=err.m, err.p=err.p,
              b.uncertain = uncertain,
-             #resample=res.resample,
-             dev=dev,
+             model.filter=model.filter,
+             equil.filter=equil.filter,
+             dev = ifelse(is.finite(model.filter), model.filter, equil.filter), ## for back compatibility -- will remove in the future
              sample2rm = which(!m.fil),
+             #deviation.eq = err.tmp,
              input=dat,
              call=cl),
         class="beem"
