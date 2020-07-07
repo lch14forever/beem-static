@@ -15,10 +15,10 @@ detectNonEqSamples <- function(err, threshold){
 ##' @param threshold threshold to filter out samples
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 ##'
-detectDiffModSamples <- function(err, threshold){
-    med <- median(err, na.rm = TRUE)
-    dev <- mad(err, na.rm = TRUE)
-    score <- abs(err - 0)/dev
+detectDiffModSamples <- function(err, threshold, filter){
+    med <- median(err[filter], na.rm = TRUE)
+    dev <- mad(err[filter], na.rm = TRUE)
+    score <- (err - med)/dev
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
@@ -147,17 +147,17 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1,
 
         if(remove_non_eq){
             ## clear up removed samples every X iterations
+            left.idx <- colSums(!sample.filter.iter)>0
             if ((iter-1) %% refresh.iter == 0) {
                 sample.filter.iter <- dat.init$sample.filter
             }
             predicted_eq <- predict_eq(dat.tss, tmp.p$a, tmp.p$b, m.iter)
             err.tmp <- abs(predicted_eq - dat.tss) /dat.tss
             nonEq.samples <- detectNonEqSamples(apply(err.tmp, 2, median, na.rm=T), equil.filter)
-
             err.tmp <- apply((err.p)^2, 2, median, na.rm = TRUE)
             #med <- 0 #mean(err.tmp[!sample.filter.iter], na.rm=TRUE)
             #dev <- mad(err.tmp[!sample.filter.iter], na.rm=TRUE)
-            diffMod.samples <- detectDiffModSamples(err.tmp, model.filter)
+            diffMod.samples <- detectDiffModSamples(err.tmp, model.filter, left.idx)
 
             sample.filter.iter <- (m1 %*% nonEq.samples)>0 |
                 (m1 %*% diffMod.samples)>0 |
