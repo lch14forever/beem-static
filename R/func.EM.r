@@ -16,9 +16,9 @@ detectNonEqSamples <- function(err, threshold){
 ##' @author Chenhao Li, Gerald Tan, Niranjan Nagarajan
 ##'
 detectDiffModSamples <- function(err, threshold, filter){
-    med <- median(err[filter], na.rm = TRUE)
-    dev <- mad(err[filter], na.rm = TRUE)
-    score <- (err - med)/dev
+    med <- median(err, na.rm = TRUE)
+    dev <- mad(err, na.rm = TRUE)
+    score <- (err - 0)/med
     score[is.na(score)] <- Inf
     return(score > threshold)
 }
@@ -154,7 +154,7 @@ func.EM <- function(dat, external.perturbation = NULL, ncpu=1,
             predicted_eq <- predict_eq(dat.tss, tmp.p$a, tmp.p$b, m.iter)
             err.tmp <- abs(predicted_eq - dat.tss) /dat.tss
             nonEq.samples <- detectNonEqSamples(apply(err.tmp, 2, median, na.rm=T), equil.filter)
-            err.tmp <- apply((err.p)^2, 2, median, na.rm = TRUE)
+            err.tmp <- apply(abs(err.p), 2, median, na.rm = TRUE)
             #med <- 0 #mean(err.tmp[!sample.filter.iter], na.rm=TRUE)
             #dev <- mad(err.tmp[!sample.filter.iter], na.rm=TRUE)
             diffMod.samples <- detectDiffModSamples(err.tmp, model.filter, left.idx)
