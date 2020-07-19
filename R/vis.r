@@ -139,19 +139,20 @@ showGrowth <- function(beem.out, dat){
 ##'
 ##' @param countData OTU/species abundance table (each row is one species, each column is one site)
 ##' @param col a vector of colors for the points
+##' @param k the number of dimensions
 ##' @description perform a PCoA analysis using Bray-Curtis distance
 ##' @importFrom vegan vegdist
 ##' @import ggplot2
 ##' @author Chenhao Li, Niranjan Nagarajan
 ##' @export
-pcoa <- function(countData, col='Color'){
-    dat.pcoa <- cmdscale(vegan::vegdist(t(countData)), eig=TRUE)
+pcoa <- function(countData, col='Color', k=2){
+    dat.pcoa <- cmdscale(vegan::vegdist(t(countData)), k=k, eig=TRUE)
     per.var <- (dat.pcoa$eig/sum(dat.pcoa$eig))[1:2] * 100
     dat <- data.frame(dat.pcoa$points, col=col)
     ggplot(dat, aes(x=X1, y=X2, col=col)) +
         geom_point(size=2) +
-        labs(x=paste0('MDS1 (', round(per.var[1], 2),'%)'),
-             y=paste0('MDS2 (', round(per.var[2], 2),'%)'))
+        labs(x=paste0('PCoA1 (', round(per.var[1], 2),'%)'),
+             y=paste0('PCoA2 (', round(per.var[2], 2),'%)'))
 }
 
 

@@ -6,7 +6,7 @@
 \usage{
 func.EM(dat, external.perturbation = NULL, ncpu = 1, m.init = NULL,
   scaling = 1000, equil.filter = Inf, model.filter = Inf,
-  refresh.iter = 5, lambda.iter = Inf, warm.iter = NULL,
+  refresh.iter = 1, lambda.iter = Inf, warm.iter = NULL,
   max.iter = 30, epsilon = 0.001, lambda.choice = 1, alpha = 1,
   debug = FALSE, verbose = TRUE)
 }

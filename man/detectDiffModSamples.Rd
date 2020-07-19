@@ -4,7 +4,7 @@
 \alias{detectDiffModSamples}
 \title{detectDiffModSamples}
 \usage{
-detectDiffModSamples(err, threshold)
+detectDiffModSamples(err, threshold, filter)
 }
 \arguments{
 \item{err}{the errors defined in `func.EM`}

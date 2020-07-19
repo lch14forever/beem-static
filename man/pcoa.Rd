@@ -4,12 +4,14 @@
 \alias{pcoa}
 \title{pcoa}
 \usage{
-pcoa(countData, col = "Color")
+pcoa(countData, col = "Color", k = 2)
 }
 \arguments{
 \item{countData}{OTU/species abundance table (each row is one species, each column is one site)}
 
 \item{col}{a vector of colors for the points}
+
+\item{k}{the number of dimensions}
 }
 \description{
 perform a PCoA analysis using Bray-Curtis distance
